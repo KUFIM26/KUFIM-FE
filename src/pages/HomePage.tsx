@@ -18,7 +18,7 @@ export default function HomePage() {
   ]
   return (
     <Page title="홈" home nav>
-      <div className="page-pad !pt-[22px]">
+      <div className="page-pad !pt-5.5">
         {showNotice && (
           <EmergencyBanner
             notice={notices.find((n) => n.category === '긴급')}
@@ -36,14 +36,14 @@ export default function HomePage() {
             ]}
           />
         </section>
-        <div className="grid grid-cols-4 gap-[17px] max-[360px]:gap-2">
+        <div className="grid grid-cols-4 gap-4 max-[360px]:gap-2">
           {shortcuts.map((link) => (
             <Link
               key={link.to}
               to={link.to}
-              className="card flex h-[75px] min-w-0 flex-col items-center justify-center gap-2 shadow-nav"
+              className="card flex h-18 min-w-0 flex-col items-center justify-center gap-2 shadow-nav"
             >
-              <span className="flex h-7 items-center">
+              <span className="flex h-5.5 items-center">
                 <Asset src={link.icon} />
               </span>
               <span className="whitespace-nowrap text-xs font-medium">{link.label}</span>

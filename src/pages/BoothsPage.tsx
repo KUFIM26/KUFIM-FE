@@ -87,7 +87,7 @@ export function BoothDetailPage() {
           <p className="mt-2 text-xs">{booth.description}</p>
         </Card>
         <Link to="/map" aria-label="축제 지도에서 위치 보기">
-          <MapImage variant="mini" className="h-[200px] rounded-xl" />
+          <MapImage variant="mini" className="h-50 rounded-xl" />
         </Link>
         {booth.period !== 'facility' && (
           <>
