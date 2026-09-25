@@ -105,7 +105,11 @@ npm run build
 npm run preview
 ```
 
-배포 산출물은 `dist/`입니다. 실제 외부 배포는 진행하지 않았습니다. BrowserRouter를 사용하므로 정적 호스팅에서 존재하지 않는 파일 경로를 `/index.html`로 돌려주는 SPA fallback 설정이 필요합니다. `public/_redirects`는 이 파일을 지원하는 호스트용 설정이며, 다른 호스트에서는 해당 서비스의 rewrite 설정을 사용하세요. 사이트 루트(`/`)에 배포하는 기본 구성입니다.
+배포 산출물은 `dist/`입니다. BrowserRouter를 사용하므로 정적 호스팅에서 존재하지 않는 파일 경로를 `/index.html`로 돌려주는 SPA fallback 설정이 필요합니다. 사이트 루트(`/`)에 배포하는 기본 구성입니다.
+
+Vercel에서는 프로젝트 루트의 `vercel.json`이 `/admin` 등의 직접 접속과 새로고침을 처리합니다. Framework Preset은 `Vite`, Build Command는 `npm run build`, Output Directory는 `dist`를 사용하세요. 설정 파일을 추가하거나 수정한 경우 변경 내용을 포함한 새 배포가 필요합니다. Git 연동 배포라면 배포 대상 브랜치에 커밋하고 푸시하세요. 기존 커밋을 다시 배포하는 것만으로는 로컬의 변경 사항이 반영되지 않습니다.
+
+`public/_redirects`는 이 파일을 지원하는 다른 호스트용 설정이며 Vercel 설정을 대신하지 않습니다. 참고: [Vercel의 Vite SPA 배포 안내](https://vercel.com/docs/frameworks/frontend/vite#using-vite-to-make-spas).
 
 설정 참고: [Vite](https://vite.dev/guide/), [Tailwind Vite 설치](https://tailwindcss.com/docs/installation/using-vite), [React Router](https://reactrouter.com/start/declarative/installation)
 
