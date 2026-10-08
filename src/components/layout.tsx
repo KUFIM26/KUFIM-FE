@@ -2,10 +2,12 @@ import { useEffect } from 'react'
 import type { ReactNode } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { Asset } from './ui'
+import { useDemo } from '../app/demo-context'
 import { figmaAssets as assets } from '../data/figma-assets'
 
 export function RootLayout() {
   const { pathname } = useLocation()
+  const { load, reload } = useDemo()
   useEffect(() => {
     window.scrollTo(0, 0)
   }, [pathname])
@@ -17,7 +19,50 @@ export function RootLayout() {
       >
         본문으로 건너뛰기
       </a>
-      <Outlet />
+      {load.status === 'ready' ? (
+        <Outlet />
+      ) : load.status === 'loading' ? (
+        <StatusMessage>축제 정보를 불러오는 중이에요.</StatusMessage>
+      ) : (
+        <StatusMessage onRetry={reload}>{load.message}</StatusMessage>
+      )}
+    </div>
+  )
+}
+// Full-page loading and error state for backend requests.
+export function StatusMessage({
+  children,
+  onRetry,
+}: {
+  children: ReactNode
+  onRetry?: () => void
+}) {
+  return (
+    <main
+      id="main-content"
+      className="flex min-h-dvh flex-col items-center justify-center gap-5 px-5 text-center"
+    >
+      <p className="text-[40px] font-bold">KUFIM</p>
+      <p role={onRetry ? 'alert' : 'status'} className="text-sm text-muted">
+        {children}
+      </p>
+      {onRetry && (
+        <button type="button" onClick={onRetry} className="primary-button green-gradient !w-40">
+          다시 시도
+        </button>
+      )}
+    </main>
+  )
+}
+export function InlineError({ error, onRetry }: { error: Error; onRetry?: () => void }) {
+  return (
+    <div role="alert" className="rounded-xl bg-white px-5 py-6 text-center text-sm text-danger">
+      {error.message}
+      {onRetry && (
+        <button type="button" onClick={onRetry} className="mt-3 block w-full text-xs underline">
+          다시 시도
+        </button>
+      )}
     </div>
   )
 }
@@ -35,6 +80,7 @@ export function Header({
   action?: ReactNode
 }) {
   const navigate = useNavigate()
+  const { festival } = useDemo()
   useEffect(() => {
     document.title = `${title} · KUFIM`
   }, [title])
@@ -48,7 +94,7 @@ export function Header({
         <div>
           <p className="text-xs font-bold">KUFIM</p>
           <h1 className="mt-0.5 text-lg font-bold max-[360px]:text-base">
-            2026 건국대학교 가을대동제 ‘일감연'
+            {festival?.name ?? "2026 건국대학교 가을대동제 ‘일감연'"}
           </h1>
         </div>
         <Link

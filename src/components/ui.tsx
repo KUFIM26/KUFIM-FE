@@ -43,7 +43,7 @@ export function Button({
     </button>
   )
 }
-export type Option = { value: string; label: string; sublabel?: string }
+export type Option = { value: string; label: string; sublabel?: string; date?: string }
 export function Tabs({
   value,
   onChange,

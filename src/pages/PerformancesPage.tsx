@@ -1,15 +1,21 @@
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useDemo } from '../app/demo-context'
-import { BottomActions, Page } from '../components/layout'
+import { BottomActions, Page, StatusMessage } from '../components/layout'
+import { isApiMode } from '../api/config'
+import { api } from '../api/endpoints'
+import { ApiError } from '../api/client'
+import { toPerformance } from '../api/mappers'
+import { useAsync } from '../api/useAsync'
 import { Card } from '../components/ui'
 import { PerformanceFilters, ScheduleList } from '../components/festival'
+import { pickOption } from '../components/options'
 import { NotFoundPage } from './UtilityPages'
 
 export function PerformancesPage({ admin = false }: { admin?: boolean }) {
-  const { performances } = useDemo()
+  const { performances, dayOptions, stageOptions } = useDemo()
   const [params, setParams] = useSearchParams()
-  const day = params.get('day') === '2' ? '2' : '1'
-  const stage = params.get('stage') === 'sub' ? 'sub' : 'main'
+  const day = pickOption(dayOptions, params.get('day'))
+  const stage = pickOption(stageOptions, params.get('stage'))
   const update = (key: string, value: string) =>
     setParams(
       (previous) => {
@@ -53,9 +59,21 @@ export function PerformancesPage({ admin = false }: { admin?: boolean }) {
 }
 export function PerformanceDetailPage() {
   const { id } = useParams()
-  const { performances } = useDemo()
-  const special = id === 'oxen' || id === 'dius'
-  const base = performances.find((p) => p.id === id) ?? (special ? performances[0] : undefined)
+  const { performances, dayOptions } = useDemo()
+  // The list response omits the description, cast and setlist.
+  const detail = useAsync(isApiMode ? () => api.performance(id!) : null, [id])
+  const special = !isApiMode && (id === 'oxen' || id === 'dius')
+  const base = isApiMode
+    ? detail.data && toPerformance(detail.data, dayOptions)
+    : (performances.find((p) => p.id === id) ?? (special ? performances[0] : undefined))
+  if (isApiMode && detail.loading)
+    return <StatusMessage>공연 정보를 불러오는 중이에요.</StatusMessage>
+  if (
+    isApiMode &&
+    detail.error &&
+    !(detail.error instanceof ApiError && detail.error.status === 404)
+  )
+    return <StatusMessage onRetry={detail.reload}>{detail.error.message}</StatusMessage>
   if (!base) return <NotFoundPage />
   const item = special
     ? {
@@ -77,7 +95,8 @@ export function PerformanceDetailPage() {
           </div>
           <h2 className="text-[22px] font-bold">{item.name}</h2>
           <p className="mt-2 text-sm font-bold">
-            {item.stage === 'main' ? '메인 스테이지' : '서브 스테이지'} {item.time}~{item.end}
+            {item.stageName ?? (item.stage === 'main' ? '메인 스테이지' : '서브 스테이지')}{' '}
+            {item.time}~{item.end}
           </p>
         </section>
         <Card className="p-4">

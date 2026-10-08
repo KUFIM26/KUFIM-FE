@@ -60,6 +60,8 @@ tests/                 # 화면·에셋·주요 이동 흐름 검증
 | 내 대기표                      | `/waiting`                                                                       |
 | 대기표 활성·취소 확인 미리보기 | `/waiting?state=active`, `/waiting?state=cancel`                                 |
 | QR 안내·접수                   | `/waiting/scan`, `/waiting/register/:boothId`                                    |
+| QR 진입 (인쇄된 QR이 여는 주소) | `/w/:boothCode` — API 모드 전용                                                  |
+| 관리자 로그인                  | `/admin/login` — API 모드 전용                                                   |
 | 관리자 홈                      | `/admin`                                                                         |
 | 공지 관리·등록·수정            | `/admin/notices`, `/admin/notices/new`, `/admin/notices/:id/edit`                |
 | 공연 관리·등록·수정            | `/admin/performances`, `/admin/performances/new`, `/admin/performances/:id/edit` |
@@ -82,11 +84,38 @@ tests/                 # 화면·에셋·주요 이동 흐름 검증
 - 부스 대기 명단, 호출 표시, 취소, 운영 상태와 시간 설정
 - 다이얼로그 키보드 이동·Escape 닫기, 입력값 기본 검증
 
+아래 내용은 기본값인 **mock 모드** 기준입니다. 백엔드 연결은 [백엔드 연결](#백엔드-연결)을 참고하세요.
+
 모든 데이터 변경은 현재 브라우저 탭의 메모리에만 적용되며 새로고침하면 초기화됩니다. 학번·전화번호는 서버 전송이나 저장을 하지 않습니다. 실제 QR 카메라 인식, 문자·전화·푸시, 실시간 대기열, 지도 API, 관리자 인증은 연결하지 않았습니다. QR 스캔 화면의 미리보기 링크로 접수 화면에 진입할 수 있습니다. 부스 설정에 보이는 QR은 Figma의 원본 예시 이미지이며 운영용 QR 발급 기능이 아닙니다.
 
-관리자 경로는 인증 없는 UI 미리보기입니다. 백엔드 연결 시 인증과 서버 권한 검사를 함께 적용해야 합니다.
+mock 모드의 관리자 경로는 인증 없는 UI 미리보기입니다. API 모드에서는 관리자 세션이 필요합니다.
 
 Figma에 상세 화면이 없는 부스 상세·긴급 신고·이용 안내는 기존 카드 스타일을 사용하는 보조 화면입니다. 임시 문구 일부는 예시 문구로 정리했습니다. 공연 등록 디자인에 두 번 등장하는 ‘공연 소개’ 입력은 두 항목으로 유지했습니다. 행사 안내는 3일이지만 공연 탭은 원본처럼 DAY 1·DAY 2만 제공합니다.
+
+## 백엔드 연결
+
+`VITE_DATA_SOURCE=api`로 실행하면 [KUFIM-BE](../KUFIM-BE)의 `/api/v1`을 사용합니다. 기본값 `mock`은 위의 Figma 데모 데이터를 그대로 사용합니다.
+
+```sh
+cp .env.example .env.local   # VITE_DATA_SOURCE=api
+# KUFIM-BE: ./gradlew bootRun (http://127.0.0.1:8080)
+npm run dev
+```
+
+개발 서버와 `npm run preview`는 `/api`, `/ws`를 `VITE_API_PROXY_TARGET`(기본 `http://127.0.0.1:8080`)으로 프록시합니다. 브라우저 입장에서는 같은 출처이므로 CORS 설정 없이 동작하며, 같은 와이파이의 휴대폰에서 `http://PC-IP:5173`으로 접속해도 됩니다.
+
+| 영역 | 연결 내용 |
+|---|---|
+| 공개 정보 | 축제·부스·시설·무대·공연·공지를 앱 시작 시 불러옵니다. 날짜 탭은 축제 기간, 무대 탭은 등록된 무대 순서를 따릅니다. 부스 상세는 소개와 대기 현황을 추가로 조회합니다. |
+| 이용자 토큰 | 브라우저마다 UUID v4를 `localStorage`(`kufim.clientToken`)에 저장하고 `X-Client-Token`으로 보냅니다. 대기표 소유권과 알림이 이 토큰에 묶입니다. |
+| 웨이팅 | `/w/:boothCode` → 활성 대기표가 있으면 `/waiting`, 없으면 접수 화면. 접수는 `Idempotency-Key`를 붙여 응답 유실 시에도 중복 접수되지 않습니다. 내 대기표는 10초마다, 부스 대기 현황은 10~15초마다 갱신합니다. |
+| 알림함 | 호출·자동 취소 알림을 조회하고 읽음 처리합니다. |
+| 관리자 | `/admin/*`는 세션(`KUFIMSESSION`)이 없으면 `/admin/login`으로 이동합니다. 쓰기 요청에는 로그인 시 발급된 `XSRF-TOKEN` 쿠키 값을 `X-XSRF-TOKEN`으로 보냅니다. 부스 관리자는 담당 부스만 볼 수 있습니다. |
+| 웨이팅 운영 | 명단 5초 갱신, 호출·재호출(`Idempotency-Key`)·입장 완료·취소, 원본 연락처 조회(열람 기록이 남음), 운영 상태·팀당 예상 시간 저장, QR PNG 조회·저장·최초 발급 |
+
+**배포:** 관리자 세션 쿠키는 `SameSite=Lax`이고 XSRF 쿠키는 FE에서 읽어야 하므로, API를 **FE와 같은 도메인의 `/api` 경로**로 제공해야 합니다. Vercel이라면 `vercel.json`의 SPA rewrite 앞에 `/api/:path*` → 백엔드 주소 rewrite를 추가하세요. 백엔드의 `FRONTEND_BASE_URL`은 QR에 인코딩될 FE 주소로 설정합니다.
+
+**아직 API에 연결하지 않은 것:** 관리자 공지·공연·부스 등록/수정 폼(API 모드에서도 화면 메모리에만 반영), 지도 핀 표시, STOMP 실시간 구독(현재는 폴링), 긴급 신고.
 
 ## 검증
 
@@ -96,7 +125,7 @@ npm run lint
 npm test
 ```
 
-테스트를 처음 실행하는 환경에서는 `npx playwright install chromium`으로 브라우저를 설치하세요. 화면별 직접 접속, 이미지 로드·SVG 비율·가로 넘침, 웨이팅 접수와 취소, 관리자 저장 흐름을 검증합니다.
+`npm test`는 mock 모드 화면 테스트와, 브라우저 안에서 KUFIM-BE 응답을 흉내 내는 API 모드 테스트(`tests/api.spec.ts`)를 함께 실행합니다. 테스트를 처음 실행하는 환경에서는 `npx playwright install chromium`으로 브라우저를 설치하세요. 화면별 직접 접속, 이미지 로드·SVG 비율·가로 넘침, 웨이팅 접수와 취소, 관리자 저장 흐름을 검증합니다.
 
 ## 빌드와 배포
 

@@ -5,6 +5,7 @@ import { BoothRow, FacilityFilters, MapImage, WaitingNumbers } from '../componen
 import { Card, Chips, EmptyState, Tabs } from '../components/ui'
 import { boothCategories } from '../data/mock'
 import { NotFoundPage } from './UtilityPages'
+import { useLiveBooth } from '../api/useLiveBooth'
 
 export function BoothsPage({ admin = false }: { admin?: boolean }) {
   const { booths } = useDemo()
@@ -68,7 +69,8 @@ export function BoothsPage({ admin = false }: { admin?: boolean }) {
 export function BoothDetailPage() {
   const { id } = useParams()
   const { booths } = useDemo()
-  const booth = booths.find((b) => b.id === id)
+  const listed = booths.find((b) => b.id === id)
+  const { booth } = useLiveBooth(listed)
   if (!booth) return <NotFoundPage />
   return (
     <Page title={booth.period === 'facility' ? '시설 안내' : '부스 안내'} back="/booths">

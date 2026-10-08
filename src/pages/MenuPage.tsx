@@ -2,8 +2,18 @@ import { Link } from 'react-router-dom'
 import { Page } from '../components/layout'
 import { Asset, Card, SectionTitle } from '../components/ui'
 import { figmaAssets as assets } from '../data/figma-assets'
+import { useDemo } from '../app/demo-context'
+import { useAdminSession } from '../app/admin-session'
+import { kst } from '../api/mappers'
+
+const monthDay = (iso: string) => {
+  const t = kst(iso)
+  return `${String(t.month).padStart(2, '0')}월 ${String(t.day).padStart(2, '0')}일`
+}
 
 export default function MenuPage({ admin = false }: { admin?: boolean }) {
+  const { festival } = useDemo()
+  const { account, logout } = useAdminSession()
   const sections = [
     {
       title: '정보',
@@ -38,8 +48,14 @@ export default function MenuPage({ admin = false }: { admin?: boolean }) {
             <span>FIM</span>
           </div>
           <div>
-            <p className="text-sm font-bold">2026 건국대학교 가을 대동제 ‘일감연'</p>
-            <p className="mt-1 text-xs font-medium">09월 30일 ~ 10월 02일</p>
+            <p className="text-sm font-bold">
+              {festival?.name ?? "2026 건국대학교 가을 대동제 ‘일감연'"}
+            </p>
+            <p className="mt-1 text-xs font-medium">
+              {festival
+                ? `${monthDay(festival.startAt)} ~ ${monthDay(festival.endAt)}`
+                : '09월 30일 ~ 10월 02일'}
+            </p>
           </div>
         </Card>
         {sections.map((section) => (
@@ -59,6 +75,26 @@ export default function MenuPage({ admin = false }: { admin?: boolean }) {
             </Card>
           </section>
         ))}
+        {admin && account && (
+          <section className="flex flex-col gap-2">
+            <SectionTitle>계정</SectionTitle>
+            <Card className="flex items-center justify-between gap-3 px-4 py-4">
+              <div>
+                <p className="text-base font-bold text-[#383838]">{account.name}</p>
+                <p className="mt-1 text-xs text-muted">
+                  {account.role === 'SUPER_ADMIN' ? '총괄 관리자' : '부스 관리자'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={logout}
+                className="text-sm font-bold text-danger underline"
+              >
+                로그아웃
+              </button>
+            </Card>
+          </section>
+        )}
       </div>
     </Page>
   )

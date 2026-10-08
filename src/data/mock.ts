@@ -9,12 +9,15 @@ export type Booth = {
   teams?: number
   minutes?: number
   position?: { x: number; y: number }
+  waitingEnabled?: boolean
+  waitingStatus?: 'OPEN' | 'PAUSED' | 'CLOSED' | 'DISABLED'
 }
 export type Performance = {
   id: string
   name: string
   day: string
   stage: string
+  stageName?: string
   time: string
   end: string
   place: string

@@ -7,8 +7,14 @@ import { Asset, Button, Card, ConfirmDialog, EmptyState, SectionTitle } from '..
 import { FestivalMeta, Stats } from '../components/festival'
 import { figmaAssets as assets } from '../data/figma-assets'
 import { NotFoundPage } from './UtilityPages'
+import { isApiMode } from '../api/config'
+import {
+  LiveAdminQueuePage,
+  LiveAdminSettingsPage,
+  LiveAdminWaitingListPage,
+} from './AdminWaitingLivePages'
 
-export function AdminWaitingListPage() {
+function DemoAdminWaitingListPage() {
   const { booths } = useDemo()
   return (
     <Page title="QR 웨이팅 관리" back="/admin">
@@ -34,7 +40,7 @@ export function AdminWaitingListPage() {
     </Page>
   )
 }
-export function AdminQueuePage() {
+function DemoAdminQueuePage() {
   const { boothId } = useParams()
   const { booths, queue, setQueue, settings } = useDemo()
   const [params, setParams] = useSearchParams()
@@ -172,7 +178,7 @@ export function AdminQueuePage() {
     </Page>
   )
 }
-export function AdminSettingsPage() {
+function DemoAdminSettingsPage() {
   const { boothId } = useParams()
   const { booths, settings, setSettings } = useDemo()
   const booth = booths.find((b) => b.id === boothId && b.period !== 'facility')
@@ -295,3 +301,7 @@ export function AdminSettingsPage() {
     </Page>
   )
 }
+
+export const AdminWaitingListPage = isApiMode ? LiveAdminWaitingListPage : DemoAdminWaitingListPage
+export const AdminQueuePage = isApiMode ? LiveAdminQueuePage : DemoAdminQueuePage
+export const AdminSettingsPage = isApiMode ? LiveAdminSettingsPage : DemoAdminSettingsPage

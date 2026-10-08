@@ -3,6 +3,8 @@ import { Asset, Card, EmptyState, Tabs } from './ui'
 import { figmaAssets as assets } from '../data/figma-assets'
 import { facilities } from '../data/mock'
 import type { Booth, Performance, Notice } from '../data/mock'
+import { useDemo } from '../app/demo-context'
+import { kst } from '../api/mappers'
 
 export function EmergencyBanner({
   dismiss,
@@ -41,14 +43,20 @@ export function EmergencyBanner({
   )
 }
 export function FestivalMeta() {
+  const { festival, dayOptions } = useDemo()
+  const today = festival ? kst(festival.serverTime).date : undefined
+  const day = dayOptions.find((d) => d.date === today)
   return (
     <div className="flex items-center gap-1.5 text-[8px] font-bold text-white">
-      <span className="rounded-xl bg-white/50 px-1.5 py-px">DAY 1</span>
-      <span>2026.09.30.</span>
-      <span>건국대학교 서울캠퍼스</span>
+      {(!festival || day) && (
+        <span className="rounded-xl bg-white/50 px-1.5 py-px">{day?.label ?? 'DAY 1'}</span>
+      )}
+      <span>{today ? `${today.replaceAll('-', '.')}.` : '2026.09.30.'}</span>
+      <span>{festival ? festival.location : '건국대학교 서울캠퍼스'}</span>
     </div>
   )
 }
+
 export function Stats({ items }: { items: { label: string; value: string }[] }) {
   return (
     <div className="flex h-[59px] gap-2">
@@ -105,25 +113,11 @@ export function PerformanceFilters({
   onDay: (value: string) => void
   onStage: (value: string) => void
 }) {
+  const { dayOptions, stageOptions } = useDemo()
   return (
     <div className="flex flex-col gap-3 px-5 pt-3">
-      <Tabs
-        value={day}
-        onChange={onDay}
-        options={[
-          { value: '1', label: 'DAY 1', sublabel: '9월 30일 (수)' },
-          { value: '2', label: 'DAY 2', sublabel: '10월 01일 (목)' },
-        ]}
-      />
-      <Tabs
-        underline
-        value={stage}
-        onChange={onStage}
-        options={[
-          { value: 'main', label: '메인 무대' },
-          { value: 'sub', label: '서브 무대' },
-        ]}
-      />
+      <Tabs value={day} onChange={onDay} options={dayOptions} />
+      <Tabs underline value={stage} onChange={onStage} options={stageOptions} />
     </div>
   )
 }

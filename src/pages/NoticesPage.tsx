@@ -2,13 +2,17 @@ import { useState } from 'react'
 import type { ReactNode } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useDemo } from '../app/demo-context'
-import { Page, BottomActions } from '../components/layout'
+import { Page, BottomActions, InlineError } from '../components/layout'
 import { Asset, Card, Chips, EmptyState } from '../components/ui'
 import { EmergencyBanner } from '../components/festival'
 import { figmaAssets as assets } from '../data/figma-assets'
 import { noticeCategories } from '../data/mock'
 import type { Notice } from '../data/mock'
 import { NotFoundPage } from './UtilityPages'
+import { isApiMode } from '../api/config'
+import { api } from '../api/endpoints'
+import { formatDateTime } from '../api/mappers'
+import { useAsync } from '../api/useAsync'
 
 function NoticeRows({
   items,
@@ -120,7 +124,7 @@ export function NoticeDetailPage() {
     </Page>
   )
 }
-export function NotificationsPage() {
+function DemoNotificationsPage() {
   const { notices, setNotices } = useDemo()
   const [allRead, setAllRead] = useState(false)
   const markRead = (id: string) => {
@@ -168,3 +172,78 @@ export function NotificationsPage() {
     </Page>
   )
 }
+// Personal notifications (waiting calls, auto-cancels) and notice alerts for this browser token.
+function LiveNotificationsPage() {
+  const list = useAsync(api.notifications, [], 30000)
+  const [error, setError] = useState('')
+  const act = async (action: () => Promise<unknown>) => {
+    setError('')
+    try {
+      await action()
+    } catch (reason) {
+      setError((reason as Error).message)
+    }
+    void list.reload()
+  }
+  const items = list.data?.content ?? []
+  return (
+    <Page
+      title="알림함"
+      action={
+        <button
+          type="button"
+          disabled={!list.data?.unreadCount}
+          onClick={() => act(api.readAllNotifications)}
+          className="text-xs font-bold text-brand underline disabled:text-[#bcbcbc]"
+        >
+          전체 읽음
+        </button>
+      }
+    >
+      <div className="page-pad">
+        {error && (
+          <p role="alert" className="text-center text-sm text-danger">
+            {error}
+          </p>
+        )}
+        {list.error && !list.data ? (
+          <InlineError error={list.error} onRetry={list.reload} />
+        ) : list.loading && !list.data ? (
+          <EmptyState>알림을 불러오는 중이에요.</EmptyState>
+        ) : !items.length ? (
+          <EmptyState>받은 알림이 없어요.</EmptyState>
+        ) : (
+          <Card className="overflow-hidden">
+            {items.map((item) => {
+              const unread = !item.readAt
+              return (
+                <Link
+                  key={item.notificationId}
+                  to={item.noticeId ? `/notices/${item.noticeId}` : '/waiting'}
+                  onClick={() => unread && act(() => api.readNotification(item.notificationId))}
+                  className={`flex min-h-[50px] items-center gap-2 border-b border-[#eee] px-4 py-2 last:border-0 ${unread ? 'bg-[#57aa5a]/15' : ''}`}
+                >
+                  <span
+                    className={`w-[3px] self-stretch ${unread ? 'bg-brand' : 'bg-[#d4d4d4]'}`}
+                  />
+                  {unread && (
+                    <span className="flex size-[19px] shrink-0 items-center justify-center rounded-full bg-brand text-xs font-bold text-white">
+                      N
+                    </span>
+                  )}
+                  <div className={`min-w-0 flex-1 ${unread ? 'text-[#383838]' : 'text-[#d4d4d4]'}`}>
+                    <h2 className="text-sm font-bold">{item.title}</h2>
+                    <p className="mt-0.5 text-xs">{item.body}</p>
+                    <p className="mt-1 text-[10px] font-medium">{formatDateTime(item.createdAt)}</p>
+                  </div>
+                  <Asset src={assets['42:751'].imgFrame1597881181} />
+                </Link>
+              )
+            })}
+          </Card>
+        )}
+      </div>
+    </Page>
+  )
+}
+export const NotificationsPage = isApiMode ? LiveNotificationsPage : DemoNotificationsPage
