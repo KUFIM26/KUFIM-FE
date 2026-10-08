@@ -6,6 +6,7 @@ import { DemoContext } from './demo-context'
 import type { LoadState, Settings, Ticket } from './demo-context'
 import type { Option } from '../components/ui'
 import { isApiMode } from '../api/config'
+import { useTopic } from '../api/realtime'
 import { api } from '../api/endpoints'
 import { ApiError } from '../api/client'
 import type { ApiFestival } from '../api/types'
@@ -74,6 +75,17 @@ export function DemoProvider({ children }: { children: ReactNode }) {
     setPerformances(catalog.performances.map((p) => toPerformance(p, days)))
     setNotices(catalog.notices.map(toNotice))
   }, [])
+  // Only notices change through /topic/notice; re-reading just them keeps the burst small
+  // when every open page receives the same broadcast.
+  const refreshNotices = useCallback(
+    () =>
+      api
+        .notices()
+        .then((items) => setNotices(items.map(toNotice)))
+        .catch(() => undefined),
+    [],
+  )
+  useTopic(isApiMode && load.status === 'ready' ? '/topic/notice' : null, refreshNotices)
   // Re-reads the catalog after an admin save without showing the full-page loader.
   const refresh = useCallback(() => fetchCatalog().then(applyCatalog), [applyCatalog])
 

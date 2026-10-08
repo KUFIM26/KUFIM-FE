@@ -113,9 +113,11 @@ npm run dev
 | 관리자 | `/admin/*`는 세션(`KUFIMSESSION`)이 없으면 `/admin/login`으로 이동합니다. 쓰기 요청에는 로그인 시 발급된 `XSRF-TOKEN` 쿠키 값을 `X-XSRF-TOKEN`으로 보냅니다. 부스 관리자는 담당 부스만 볼 수 있습니다. |
 | 웨이팅 운영 | 명단 5초 갱신, 호출·재호출(`Idempotency-Key`)·입장 완료·취소, 원본 연락처 조회(열람 기록이 남음), 운영 상태·팀당 예상 시간 저장, QR PNG 조회·저장·최초 발급 |
 
-**배포:** 관리자 세션 쿠키는 `SameSite=Lax`이고 XSRF 쿠키는 FE에서 읽어야 하므로, API를 **FE와 같은 도메인의 `/api` 경로**로 제공해야 합니다. Vercel이라면 `vercel.json`의 SPA rewrite 앞에 `/api/:path*` → 백엔드 주소 rewrite를 추가하세요. 백엔드의 `FRONTEND_BASE_URL`은 QR에 인코딩될 FE 주소로 설정합니다.
+**배포:** 관리자 세션 쿠키는 `SameSite=Lax`이고 XSRF 쿠키는 FE에서 읽어야 하므로, API를 **FE와 같은 주소의 `/api`·`/ws` 경로**로 제공해야 합니다. Vercel rewrite는 WebSocket을 프록시하지 못하므로 API 모드 배포는 KUFIM-BE의 [`deploy/`](../KUFIM-BE/deploy/README.md) 구성(Caddy가 이 앱을 빌드해 함께 제공, 무료)을 사용하고, Vercel은 mock 데모용으로 둡니다.
 
-**아직 API에 연결하지 않은 것:** 관리자 공지·공연·부스 등록/수정 폼(API 모드에서도 화면 메모리에만 반영), 지도 핀 표시, STOMP 실시간 구독(현재는 폴링), 긴급 신고.
+**실시간:** 내 대기표·부스 대기 현황·관리자 명단·공지는 STOMP(`/ws`) 토픽 신호를 받으면 해당 데이터만 다시 조회합니다. 연결이 끊기면 기존 주기(5~15초) 폴링으로 돌아가고, 연결 중에는 60초 안전망 폴링만 남습니다. 관리자 명단 상단에 연결 상태가 표시됩니다.
+
+**아직 API에 연결하지 않은 것:** 지도 핀 표시와 도면 등록, 긴급 신고.
 
 ## 검증
 

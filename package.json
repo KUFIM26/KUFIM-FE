@@ -12,6 +12,7 @@
     "format": "prettier --write src tests *.ts *.json README.md index.html"
   },
   "dependencies": {
+    "@stomp/stompjs": "^7.3.0",
     "@tailwindcss/vite": "^4.3.3",
     "pretendard": "^1.3.9",
     "react": "^19.2.8",

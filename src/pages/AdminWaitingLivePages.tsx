@@ -13,6 +13,7 @@ import { ApiError } from '../api/client'
 import { kst, minutesBetween } from '../api/mappers'
 import { randomUuid } from '../api/token'
 import { useAsync } from '../api/useAsync'
+import { pollEvery, useRealtimeConnected, useTopic } from '../api/realtime'
 import type { AcceptingStatus, ApiAdminTicket, ApiWaitingConfig } from '../api/types'
 
 const statusLabels: Record<AcceptingStatus, string> = {
@@ -71,7 +72,13 @@ export function LiveAdminWaitingListPage() {
 
 export function LiveAdminQueuePage() {
   const { booth, allowed } = useManagedBooth()
-  const queue = useAsync(allowed ? () => api.admin.queue(booth!.id) : null, [booth?.id], 5000)
+  const connected = useRealtimeConnected()
+  const queue = useAsync(
+    allowed ? () => api.admin.queue(booth!.id) : null,
+    [booth?.id],
+    pollEvery(connected, 5000),
+  )
+  const live = useTopic(allowed ? `/topic/admin/booth/${booth!.id}/waiting` : null, queue.reload)
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [cancelTarget, setCancelTarget] = useState<ApiAdminTicket | null>(null)
@@ -144,7 +151,12 @@ export function LiveAdminQueuePage() {
           </p>
         )}
         <section className="flex flex-col gap-2">
-          <SectionTitle>대기 명단</SectionTitle>
+          <div className="flex items-center justify-between">
+            <SectionTitle>대기 명단</SectionTitle>
+            <span role="status" className="text-xs text-muted">
+              {live ? '실시간 연결됨' : '자동 새로고침 중'}
+            </span>
+          </div>
           {queue.error && !data ? (
             <InlineError error={queue.error} onRetry={queue.reload} />
           ) : !data ? (

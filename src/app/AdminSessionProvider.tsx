@@ -6,6 +6,7 @@ import { api } from '../api/endpoints'
 import { ApiError, adminUnauthorizedEvent } from '../api/client'
 import type { ApiAdminAccount } from '../api/types'
 import { StatusMessage } from '../components/layout'
+import { reconnectRealtime } from '../api/realtime'
 import { AdminSessionContext, useAdminSession } from './admin-session'
 import type { AdminSession } from './admin-session'
 
@@ -50,12 +51,14 @@ export function AdminSessionProvider({ children }: { children: ReactNode }) {
     const result = await api.admin.login(loginId, password)
     setError(null)
     setAccount(result.account)
+    void reconnectRealtime()
   }, [])
   const logout = useCallback(async () => {
     try {
       await api.admin.logout()
     } finally {
       setAccount(null)
+      void reconnectRealtime()
     }
   }, [])
   const ensure = useCallback(() => setAttempt((n) => n || 1), [])

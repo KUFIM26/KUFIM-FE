@@ -14,6 +14,7 @@ import { ApiError } from '../api/client'
 import { formatFullDateTime, kst, toBooth } from '../api/mappers'
 import { randomUuid } from '../api/token'
 import { useAsync } from '../api/useAsync'
+import { pollEvery, useRealtimeConnected, useTopic } from '../api/realtime'
 import type { ApiTicket } from '../api/types'
 
 export function WaitingInstructions() {
@@ -64,7 +65,11 @@ export function WaitingPage() {
   const [cancelOpen, setCancelOpen] = useState(preview && params.get('state') === 'cancel')
   const [actionError, setActionError] = useState('')
   // The server keeps the ticket for this browser token, so it survives reloads and new tabs.
-  const mine = useAsync(isApiMode ? api.myWaitings : null, [], 10000)
+  const connected = useRealtimeConnected()
+  const mine = useAsync(isApiMode ? api.myWaitings : null, [], pollEvery(connected, 10000))
+  const current = mine.data?.[0]
+  useTopic(current ? `/topic/waiting/${current.waitingId}` : null, mine.reload)
+  useTopic(current ? `/topic/booth/${current.boothId}/waiting` : null, mine.reload)
   const popular = useAsync(
     isApiMode ? () => api.booths({ sort: 'popular', limit: 3, waitingOnly: true }) : null,
     [],

@@ -84,6 +84,9 @@ async function fakeBackend(page: Page, options: Options = {}) {
       serverTime: now,
     }
   }
+  // No broker by default: the socket never completes CONNECT, so pages fall back to polling.
+  // fakeStomp() registers later and takes precedence.
+  await page.routeWebSocket('**/ws', () => {})
   await page.route('**/api/v1/**', async (route) => {
     const request = route.request()
     state.requests.push(request)
@@ -597,4 +600,103 @@ test('booth admins do not see content management', async ({ page }) => {
   await page.goto('/admin')
   await expect(page.getByRole('link', { name: 'QR 웨이팅 관리' })).toBeVisible()
   await expect(page.getByRole('link', { name: '공지사항 등록' })).toHaveCount(0)
+})
+
+// A minimal STOMP 1.2 broker on /ws: answers CONNECT, records SUBSCRIBE, pushes MESSAGE.
+async function fakeStomp(page: Page) {
+  const frames: { command: string; headers: Record<string, string> }[] = []
+  const subscriptions = new Map<string, string>()
+  let socket: { send: (data: string) => void } | null = null
+  await page.routeWebSocket('**/ws', (ws) => {
+    socket = ws
+    ws.onMessage((raw) => {
+      for (const chunk of String(raw).split('\0')) {
+        const text = chunk.replace(/^\n+/, '')
+        if (!text) continue
+        const [head] = text.split('\n\n')
+        const [command, ...lines] = head.split('\n')
+        const headers = Object.fromEntries(
+          lines.map((line) => [
+            line.slice(0, line.indexOf(':')),
+            line.slice(line.indexOf(':') + 1),
+          ]),
+        )
+        frames.push({ command, headers })
+        if (command === 'CONNECT' || command === 'STOMP')
+          ws.send('CONNECTED\nversion:1.2\nheart-beat:0,0\n\n\0')
+        if (command === 'SUBSCRIBE') subscriptions.set(headers.destination, headers.id)
+        if (command === 'UNSUBSCRIBE')
+          for (const [destination, id] of subscriptions)
+            if (id === headers.id) subscriptions.delete(destination)
+      }
+    })
+  })
+  return {
+    frames,
+    subscribed: (destination: string) => subscriptions.has(destination),
+    push(destination: string, body: object) {
+      const id = subscriptions.get(destination)
+      if (!socket || !id) throw new Error(`not subscribed: ${destination}`)
+      socket.send(
+        `MESSAGE\ndestination:${destination}\nsubscription:${id}\nmessage-id:${Date.now()}\ncontent-type:application/json\n\n${JSON.stringify(body)}\0`,
+      )
+    },
+  }
+}
+
+test('a call reaches the waiting page over STOMP without reloading', async ({ page }) => {
+  const waiting = ticket()
+  const backend = await fakeBackend(page, { tickets: [waiting] })
+  const stomp = await fakeStomp(page)
+  await page.goto('/waiting')
+  await expect(page.getByText('1번째')).toBeVisible()
+  const personal = `/topic/waiting/${waiting.waitingId}`
+  await expect.poll(() => stomp.subscribed(personal)).toBe(true)
+  expect(stomp.subscribed('/topic/booth/7/waiting')).toBe(true)
+  expect(stomp.subscribed('/topic/notice')).toBe(true)
+  const connect = stomp.frames.find((f) => f.command === 'CONNECT')!
+  expect(connect.headers['X-Client-Token']).toMatch(uuidV4)
+
+  // The admin calls on another device; only the STOMP message tells this page.
+  Object.assign(waiting, {
+    status: 'CALLED',
+    calledAt: now,
+    autoCancelAt: '2026-09-30T13:10:00+09:00',
+  })
+  stomp.push(personal, { type: 'WAITING_UPDATED', waitingId: waiting.waitingId, status: 'CALLED' })
+  await expect(page.getByText('지금 입장해주세요!')).toBeVisible({ timeout: 3000 })
+})
+
+test('an urgent notice broadcast updates the home banner', async ({ page }) => {
+  const backend = await fakeBackend(page)
+  const stomp = await fakeStomp(page)
+  await page.goto('/')
+  await expect.poll(() => stomp.subscribed('/topic/notice')).toBe(true)
+  backend.notices.unshift({
+    ...backend.notices[0],
+    noticeId: 6,
+    title: '무대 앞 인파 과밀, 우회 바랍니다',
+    publishedAt: now,
+  })
+  stomp.push('/topic/notice', { type: 'NOTICE_PUBLISHED', noticeId: 6 })
+  await expect(page.getByText('무대 앞 인파 과밀, 우회 바랍니다')).toBeVisible({ timeout: 3000 })
+})
+
+test('the admin queue refreshes on its STOMP topic', async ({ page }) => {
+  const backend = await fakeBackend(page, { tickets: [ticket()] })
+  const stomp = await fakeStomp(page)
+  backend.loggedIn = true
+  await page.goto('/admin/waiting/7')
+  await expect(page.getByText('1번', { exact: true })).toBeVisible()
+  await expect.poll(() => stomp.subscribed('/topic/admin/booth/7/waiting')).toBe(true)
+  await expect(page.getByText('실시간 연결됨')).toBeVisible()
+  backend.tickets.push(
+    ticket({
+      waitingId: '33333333-3333-4333-8333-333333333333',
+      waitingNumber: 2,
+      registeredAt: now,
+    }),
+  )
+  stomp.push('/topic/admin/booth/7/waiting', { type: 'WAITING_LIST_CHANGED', boothId: 7 })
+  await expect(page.getByText('2번', { exact: true })).toBeVisible({ timeout: 3000 })
 })

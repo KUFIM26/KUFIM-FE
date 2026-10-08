@@ -13,6 +13,7 @@ import { isApiMode } from '../api/config'
 import { api } from '../api/endpoints'
 import { formatDateTime } from '../api/mappers'
 import { useAsync } from '../api/useAsync'
+import { useTopic } from '../api/realtime'
 
 function NoticeRows({
   items,
@@ -175,6 +176,7 @@ function DemoNotificationsPage() {
 // Personal notifications (waiting calls, auto-cancels) and notice alerts for this browser token.
 function LiveNotificationsPage() {
   const list = useAsync(api.notifications, [], 30000)
+  useTopic('/topic/notice', list.reload)
   const [error, setError] = useState('')
   const act = async (action: () => Promise<unknown>) => {
     setError('')
