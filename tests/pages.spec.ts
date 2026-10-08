@@ -76,6 +76,10 @@ test('waiting registration validates input, creates a ticket, and supports cance
   await page.goto('/waiting/register/booth-1')
   await page.getByLabel('학번', { exact: true }).fill('202300012')
   await page.getByLabel('전화번호', { exact: true }).fill('01012341234')
+  await page.getByRole('combobox', { name: '인원 수' }).selectOption('2')
+  await page.getByRole('button', { name: '자세히 보기' }).click()
+  await expect(page.getByText(/웨이팅 등록과 호출 안내를 위해/)).toBeVisible()
+  await page.getByLabel('동의합니다', { exact: true }).check()
   await page.getByRole('button', { name: '웨이팅 접수하기' }).click()
   await expect(page).toHaveURL(/\/waiting$/)
   await expect(page.getByText('88번', { exact: true })).toBeVisible()
@@ -86,6 +90,27 @@ test('waiting registration validates input, creates a ticket, and supports cance
   await page.getByRole('button', { name: '웨이팅 취소하기', exact: true }).click()
   await page.getByRole('dialog').getByRole('button', { name: '취소하기', exact: true }).click()
   await expect(page.getByText('아직 신청한 웨이팅이 없어요.')).toBeVisible()
+})
+
+test('waiting form keeps the focused field visible above the mobile keyboard', async ({ page }) => {
+  await page.goto('/waiting/register/booth-1')
+  const phone = page.getByLabel('전화번호', { exact: true })
+  await phone.focus()
+  const initialScroll = await page.evaluate(() => window.scrollY)
+
+  await page.setViewportSize({ width: 393, height: 500 })
+  await expect.poll(() => phone.evaluate((input) => {
+    const viewport = window.visualViewport
+    return input.getBoundingClientRect().bottom <=
+      (viewport?.offsetTop ?? 0) + (viewport?.height ?? window.innerHeight) - 16
+  })).toBe(true)
+  await expect.poll(() => page.locator('.registration-sheet').evaluate((sheet) =>
+    parseFloat(getComputedStyle(sheet).paddingBottom),
+  )).toBeGreaterThan(20)
+
+  await page.setViewportSize({ width: 393, height: 898 })
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(initialScroll)
+  await expect(page.locator('.registration-sheet')).toHaveCSS('padding-bottom', '20px')
 })
 
 test('admin notice creation is reflected in the list and edit form', async ({ page }) => {

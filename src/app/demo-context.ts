@@ -6,6 +6,7 @@ import type { Booth, Notice, Performance } from '../data/mock'
 export type Ticket = {
   boothId: string
   number: number
+  people: number
   position: number
   minutes: number
   registered: string

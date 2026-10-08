@@ -223,8 +223,10 @@ export const figmaAssets = {
     imgVector: '/assets/figma/75-435-87cdd.svg',
   },
   '75:550': {
-    imgVector: '/assets/figma/75-550-87cdd.svg',
-    imgRectangle15: '/assets/figma/75-550-e3a35.svg',
-    imgVector1: '/assets/figma/75-550-1322e.svg',
+    imgVector: '/assets/figma/75-550-cc992.svg',
+    imgRectangle15: '/assets/figma/75-550-0cee7.svg',
+    imgVector1: '/assets/figma/75-550-54530.svg',
+    imgChevronDown: '/assets/figma/75-550-f7e01.svg',
+    imgConsentCheck: '/assets/figma/75-550-b38d1.svg',
   },
 } as const
