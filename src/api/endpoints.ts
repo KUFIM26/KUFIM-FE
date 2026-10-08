@@ -13,8 +13,20 @@ import type {
   ApiTicket,
   ApiWaitingConfig,
   ApiWaitingStatus,
+  BoothInput,
+  FacilityInput,
+  NoticeInput,
+  PerformanceInput,
   WaitingCreateInput,
 } from './types'
+
+// Create (POST), update (PATCH, partial) and delete for one admin content collection.
+const content = <Input>(path: string) => ({
+  create: (input: Input) => request<unknown>(`/admin/${path}`, { method: 'POST', body: input }),
+  update: (id: string, input: Partial<Input>) =>
+    request<unknown>(`/admin/${path}/${id}`, { method: 'PATCH', body: input }),
+  remove: (id: string) => request<void>(`/admin/${path}/${id}`, { method: 'DELETE' }),
+})
 
 export const api = {
   festival: () => request<ApiFestival>('/festival'),
@@ -74,6 +86,10 @@ export const api = {
         body: patch,
       }),
     qrPng: (boothId: string) => requestBlob(`/admin/booths/${boothId}/qr`, 'image/png'),
+    notices: content<NoticeInput>('notices'),
+    performances: content<PerformanceInput>('performances'),
+    booths: content<BoothInput>('booths'),
+    facilities: content<FacilityInput>('facilities'),
     issueQr: (boothId: string) =>
       request<{ boothCode: string; url: string }>(`/admin/booths/${boothId}/qr`, {
         method: 'POST',

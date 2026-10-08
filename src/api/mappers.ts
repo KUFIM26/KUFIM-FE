@@ -13,33 +13,42 @@ import type {
   PerformanceType,
 } from './types'
 
-const organizerLabels: Record<OrganizerType, string> = {
+export const organizerLabels: Record<OrganizerType, string> = {
   STUDENT_COUNCIL: '총학생회',
   COLLEGE: '단과대학',
   CLUB: '동아리',
   INDIVIDUAL: '개인',
   UNIVERSITY: '학교본부',
 }
-const facilityLabels: Record<FacilityType, string> = {
+export const facilityLabels: Record<FacilityType, string> = {
   CONTROL_ROOM: '상황실',
   RESTROOM: '화장실',
   ALCOHOL_SALES: '주류판매',
   PHOTO_BOOTH: '포토부스',
   SMOKING_AREA: '흡연구역',
 }
-const noticeLabels: Record<NoticeCategory, string> = {
+export const noticeLabels: Record<NoticeCategory, string> = {
   URGENT: '긴급',
   PERFORMANCE: '공연',
   SAFETY: '안전',
   TRAFFIC: '교통',
   INFO: '안내',
 }
-const performanceLabels: Record<PerformanceType, string> = {
+export const performanceLabels: Record<PerformanceType, string> = {
   BAND: '밴드',
   DANCE: '댄스',
   ARTIST: '아티스트',
   OTHER: '기타',
 }
+// Reverse lookup for form values, e.g. fromLabel(noticeLabels, '긴급') === 'URGENT'.
+export function fromLabel<K extends string>(labels: Record<K, string>, label: string): K {
+  const key = (Object.keys(labels) as K[]).find((k) => labels[k] === label)
+  if (!key) throw new Error(`알 수 없는 분류입니다: ${label}`)
+  return key
+}
+// "HH:mm" on a festival date, as the +09:00 offset time the backend expects.
+export const toOffsetTime = (date: string, time: string) => `${date}T${time}:00+09:00`
+
 const weekdays = ['일', '월', '화', '수', '목', '금', '토']
 const pad = (value: number) => String(value).padStart(2, '0')
 

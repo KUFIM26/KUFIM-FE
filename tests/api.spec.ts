@@ -20,6 +20,16 @@ type Options = {
   failCatalogOnce?: boolean
   role?: 'SUPER_ADMIN' | 'BOOTH_ADMIN'
   managedBoothIds?: number[]
+  noFloorplan?: boolean
+}
+type Write = { method: string; path: string; body: Record<string, unknown> | null }
+const urgentNotice = {
+  noticeId: 5,
+  title: '우천으로 야간 부스 조정',
+  content: '현장 안내를 확인해주세요.',
+  category: 'URGENT',
+  publishedAt: '2026-09-30T12:30:00+09:00',
+  unread: true,
 }
 const now = '2026-09-30T13:00:00+09:00'
 const uuidV4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
@@ -54,6 +64,9 @@ async function fakeBackend(page: Page, options: Options = {}) {
     loggedIn: false,
     catalogFailures: options.failCatalogOnce ? 1 : 0,
     requests: [] as Request[],
+    // Admin content writes, and the notice list they change.
+    writes: [] as Write[],
+    notices: [{ ...urgentNotice }] as (typeof urgentNotice)[],
   }
   const active = () => state.tickets.filter((t) => t.status === 'WAITING' || t.status === 'CALLED')
   const view = (t: Ticket) => {
@@ -95,6 +108,32 @@ async function fakeBackend(page: Page, options: Options = {}) {
     if (path.startsWith('/admin') && method !== 'GET' && !path.startsWith('/admin/auth/login'))
       if (request.headers()['x-xsrf-token'] !== 'csrf-123')
         return fail(403, 'A003', '접근 권한이 없습니다.')
+
+    const content =
+      /^(POST|PATCH|DELETE) \/admin\/(notices|performances|booths|facilities)(?:\/(\d+))?$/.exec(
+        key,
+      )
+    if (content) {
+      const [, verb, kind, id] = content
+      const body = request.postData() ? (request.postDataJSON() as Record<string, unknown>) : null
+      state.writes.push({ method: verb, path: path, body })
+      if (body?.pin && options.noFloorplan) return fail(404, 'M003', '등록된 도면이 없습니다.')
+      if (kind === 'notices') {
+        const notice = state.notices.find((n) => String(n.noticeId) === id)
+        if (verb === 'POST')
+          state.notices.unshift({
+            ...urgentNotice,
+            ...(body as object),
+            noticeId: 100 + state.notices.length,
+            unread: false,
+          })
+        if (verb === 'PATCH' && notice) Object.assign(notice, body)
+        if (verb === 'DELETE') state.notices = state.notices.filter((n) => n !== notice)
+      }
+      return verb === 'DELETE'
+        ? route.fulfill({ status: 204 })
+        : ok({}, verb === 'POST' ? 201 : 200)
+    }
 
     switch (key) {
       case 'GET /festival':
@@ -206,16 +245,7 @@ async function fakeBackend(page: Page, options: Options = {}) {
           setlist: '첫 곡\n두 번째 곡',
         })
       case 'GET /notices':
-        return ok([
-          {
-            noticeId: 5,
-            title: '우천으로 야간 부스 조정',
-            content: '현장 안내를 확인해주세요.',
-            category: 'URGENT',
-            publishedAt: '2026-09-30T12:30:00+09:00',
-            unread: true,
-          },
-        ])
+        return ok(state.notices)
       case 'GET /notifications':
         return ok({
           content: [
@@ -426,4 +456,145 @@ test('a booth admin only sees assigned booths', async ({ page }) => {
   await expect(page.getByText('웨이팅을 운영하는 담당 부스가 없어요.')).toBeVisible()
   await page.goto('/admin/waiting/7')
   await expect(page.getByText('담당 부스가 아니라서 운영할 수 없어요.')).toBeVisible()
+})
+
+// Skips the login form: the fake backend accepts the session and the XSRF cookie is set.
+async function asSuperAdmin(page: Page, backend: { loggedIn: boolean }) {
+  backend.loggedIn = true
+  await page
+    .context()
+    .addCookies([{ name: 'XSRF-TOKEN', value: 'csrf-123', url: 'http://127.0.0.1:4174' }])
+}
+
+test('admin creates, edits and deletes a notice', async ({ page }) => {
+  const backend = await fakeBackend(page)
+  await asSuperAdmin(page, backend)
+  await page.goto('/admin/notices/new')
+  await page.getByRole('button', { name: '안전', exact: true }).click()
+  await page.getByLabel('공지 제목').fill('분실물 센터 위치 안내')
+  await page.getByLabel('공지 내용').fill('학생회관 1층에서 운영합니다.')
+  await page.getByRole('button', { name: '저장하기' }).click()
+  await expect(page).toHaveURL(/\/admin\/notices$/)
+  await expect(page.getByText('분실물 센터 위치 안내')).toBeVisible()
+  expect(backend.writes.at(-1)).toEqual({
+    method: 'POST',
+    path: '/admin/notices',
+    body: {
+      title: '분실물 센터 위치 안내',
+      content: '학생회관 1층에서 운영합니다.',
+      category: 'SAFETY',
+    },
+  })
+  const post = backend.requests.find(
+    (r) => r.method() === 'POST' && r.url().endsWith('/admin/notices'),
+  )!
+  expect(post.headers()['x-xsrf-token']).toBe('csrf-123')
+
+  await page.goto('/admin/notices/5/edit')
+  await page.getByLabel('공지 제목').fill('우천 시 야간 부스 18시 종료')
+  await page.getByRole('button', { name: '저장하기' }).click()
+  await expect(page.getByText('우천 시 야간 부스 18시 종료')).toBeVisible()
+  expect(backend.writes.at(-1)?.method).toBe('PATCH')
+  expect(backend.writes.at(-1)?.path).toBe('/admin/notices/5')
+
+  await page.goto('/admin/notices/5/edit')
+  await page.getByRole('button', { name: '공지 삭제하기' }).click()
+  await page.getByRole('dialog').getByRole('button', { name: '삭제하기' }).click()
+  await expect(page).toHaveURL(/\/admin\/notices$/)
+  await expect(page.getByText('우천 시 야간 부스 18시 종료')).toHaveCount(0)
+  expect(backend.writes.at(-1)).toEqual({ method: 'DELETE', path: '/admin/notices/5', body: null })
+})
+
+test('admin performance form sends festival times and loads details for editing', async ({
+  page,
+}) => {
+  const backend = await fakeBackend(page)
+  await asSuperAdmin(page, backend)
+  await page.goto('/admin/performances/new?day=2&stage=1')
+  await page.getByRole('button', { name: '댄스', exact: true }).click()
+  await page.getByLabel('무대 팀명').fill('DIUS')
+  await page.getByLabel('공연 시작 시간').selectOption('18:00')
+  await page.getByLabel('공연 종료 시간').selectOption('19:30')
+  await page.getByLabel('공연 소개', { exact: true }).fill('댄스동아리 무대')
+  await page.getByRole('button', { name: '저장하기' }).click()
+  await expect(page).toHaveURL(/\/admin\/performances\?day=2&stage=1$/)
+  expect(backend.writes.at(-1)).toEqual({
+    method: 'POST',
+    path: '/admin/performances',
+    body: {
+      festivalId: 1,
+      stageId: 1,
+      title: 'DIUS',
+      type: 'DANCE',
+      description: '댄스동아리 무대',
+      additionalDescription: '',
+      castMembers: '',
+      setlist: '',
+      startAt: '2026-10-01T18:00:00+09:00',
+      endAt: '2026-10-01T19:30:00+09:00',
+    },
+  })
+
+  await page.goto('/admin/performances/10/edit')
+  // A filled textarea inside its <label> adds its value to the accessible name.
+  await expect(page.locator('textarea[name="description"]')).toHaveValue('정책동아리 옥슨의 무대')
+  await expect(page.getByLabel('출연진')).toHaveValue('보컬 김건국')
+  await expect(page.getByLabel('공연 시작 시간')).toHaveValue('12:00')
+  await page.getByRole('button', { name: '저장하기' }).click()
+  await expect(page).toHaveURL(/\/admin\/performances\?day=1&stage=1$/)
+  expect(backend.writes.at(-1)?.path).toBe('/admin/performances/10')
+  expect(backend.writes.at(-1)?.body?.startAt).toBe('2026-09-30T12:00:00+09:00')
+})
+
+test('admin booth form sends the pin and waiting flag, and explains a missing floorplan', async ({
+  page,
+}) => {
+  const backend = await fakeBackend(page, { noFloorplan: true })
+  await asSuperAdmin(page, backend)
+  await page.goto('/admin/booths/new?period=night')
+  await page.getByRole('button', { name: '동아리', exact: true }).click()
+  await page.getByLabel('부스 명').fill('밴드 주점')
+  await page.getByLabel('운영 장소').fill('학생회관 앞')
+  await page.getByLabel('QR 웨이팅 사용').uncheck()
+  await page.getByRole('button', { name: '지도에서 위치 지정' }).click()
+  await page.getByRole('button', { name: '지도에서 위치 선택' }).click()
+  await page.getByRole('button', { name: '지정하기' }).click()
+  await page.getByRole('button', { name: '저장하기' }).click()
+  await expect(page.getByRole('alert')).toContainText('지도 도면이 등록되지 않아')
+  const body = backend.writes.at(-1)!.body!
+  expect(body).toMatchObject({
+    festivalId: 1,
+    name: '밴드 주점',
+    organizerType: 'CLUB',
+    period: 'NIGHT',
+    place: '학생회관 앞',
+    operatingHours: '18:00~25:00',
+    waitingEnabled: false,
+  })
+  expect(body.pin).toEqual({ xPercent: expect.any(Number), yPercent: expect.any(Number) })
+})
+
+test('a facility edit stays a facility and patches the facility resource', async ({ page }) => {
+  const backend = await fakeBackend(page)
+  await asSuperAdmin(page, backend)
+  await page.goto('/admin/booths/facility-3/edit')
+  await expect(page.getByRole('button', { name: '주간' })).toHaveCount(0)
+  await expect(page.getByLabel('시설 명')).toHaveValue('공학관 화장실')
+  await page.getByLabel('시설 소개').fill('공학관 1층 남녀 화장실')
+  await page.getByRole('button', { name: '저장하기' }).click()
+  await expect(page).toHaveURL(/\/admin\/booths\?period=facility$/)
+  expect(backend.writes.at(-1)).toMatchObject({
+    method: 'PATCH',
+    path: '/admin/facilities/3',
+    body: { type: 'RESTROOM', description: '공학관 1층 남녀 화장실', operatingHours: '24시간' },
+  })
+  expect(backend.writes.at(-1)?.body?.pin).toBeUndefined()
+})
+
+test('booth admins do not see content management', async ({ page }) => {
+  const backend = await fakeBackend(page, { role: 'BOOTH_ADMIN', managedBoothIds: [7] })
+  await asSuperAdmin(page, backend)
+  await page.goto('/admin')
+  await expect(page.getByRole('link', { name: 'QR 웨이팅 관리' })).toBeVisible()
+  await expect(page.getByRole('link', { name: '공지사항 등록' })).toHaveCount(0)
 })

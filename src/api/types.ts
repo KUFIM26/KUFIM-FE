@@ -155,3 +155,39 @@ export type WaitingCreateInput = {
   partySize: number
   privacyConsent: true
 }
+
+// Admin content inputs (AdminCatalogApiController records). PATCH accepts any subset.
+export type PinInput = { xPercent: number; yPercent: number }
+export type NoticeInput = { title: string; content: string; category: NoticeCategory }
+export type PerformanceInput = {
+  festivalId: number
+  stageId: number
+  title: string
+  type: PerformanceType
+  description: string
+  additionalDescription: string
+  castMembers: string
+  setlist: string
+  startAt: string
+  endAt: string
+}
+export type BoothInput = {
+  festivalId: number
+  name: string
+  organizerType: OrganizerType
+  period: 'DAY' | 'NIGHT'
+  place: string
+  description: string
+  operatingHours: string
+  waitingEnabled: boolean
+  pin?: PinInput
+}
+export type FacilityInput = {
+  festivalId: number
+  type: FacilityType
+  name: string
+  description: string
+  place: string
+  operatingHours: string
+  pin?: PinInput
+}

@@ -2,13 +2,28 @@ import { useEffect, useRef, useState } from 'react'
 import type { FormEvent, ReactNode } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useDemo } from '../app/demo-context'
-import { BottomActions, Page } from '../components/layout'
-import { Asset, Button, Chips, SectionTitle, Tabs } from '../components/ui'
+import { BottomActions, Page, StatusMessage } from '../components/layout'
+import { Asset, Button, Chips, ConfirmDialog, SectionTitle, Tabs } from '../components/ui'
 import { FacilityFilters, MapImage, PerformanceFilters } from '../components/festival'
 import { boothCategories } from '../data/mock'
 import type { Booth, Notice, Performance } from '../data/mock'
 import { figmaAssets as assets } from '../data/figma-assets'
 import { NotFoundPage } from './UtilityPages'
+import { pickOption } from '../components/options'
+import { isApiMode } from '../api/config'
+import { api } from '../api/endpoints'
+import { ApiError } from '../api/client'
+import { useAsync } from '../api/useAsync'
+import {
+  facilityLabels,
+  fromLabel,
+  noticeLabels,
+  organizerLabels,
+  performanceLabels,
+  toOffsetTime,
+  toPerformance,
+} from '../api/mappers'
+import type { PinInput } from '../api/types'
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -18,11 +33,24 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
     </label>
   )
 }
-function SaveBar({ form, cancel }: { form: string; cancel: () => void }) {
+function SaveBar({
+  form,
+  cancel,
+  saving = false,
+}: {
+  form: string
+  cancel: () => void
+  saving?: boolean
+}) {
   return (
     <BottomActions>
-      <Button type="submit" form={form} className="!bg-[#1d8a45] !bg-none !text-base">
-        저장하기
+      <Button
+        type="submit"
+        form={form}
+        disabled={saving}
+        className="!bg-[#1d8a45] !bg-none !text-base"
+      >
+        {saving ? '저장 중…' : '저장하기'}
       </Button>
       <Button tone="gray" className="!bg-[#cfcfcf] !text-base" onClick={cancel}>
         취소하기
@@ -31,6 +59,81 @@ function SaveBar({ form, cancel }: { form: string; cancel: () => void }) {
   )
 }
 const value = (data: FormData, key: string) => String(data.get(key) || '').trim()
+
+// Runs an admin write, refreshes the catalog and leaves the form. Errors stay on the form.
+function useAdminWrite() {
+  const { refresh } = useDemo()
+  const navigate = useNavigate()
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const run = async (action: () => Promise<unknown>, to: string) => {
+    setSaving(true)
+    setError('')
+    try {
+      await action()
+    } catch (reason) {
+      setError(
+        reason instanceof ApiError && reason.code === 'M003'
+          ? '지도 도면이 등록되지 않아 위치를 저장할 수 없어요. 위치 없이 저장하거나 도면을 먼저 등록해주세요.'
+          : (reason as Error).message,
+      )
+      setSaving(false)
+      return
+    }
+    try {
+      await refresh()
+    } catch {
+      // The write succeeded; the list will catch up on the next load.
+    }
+    navigate(to)
+  }
+  return { saving, error, setError, run }
+}
+function FormError({ message }: { message: string }) {
+  if (!message) return null
+  return (
+    <p role="alert" className="text-sm text-danger">
+      {message}
+    </p>
+  )
+}
+// Delete link for edit forms backed by the API.
+function DeleteAction({ label, onConfirm }: { label: string; onConfirm: () => void }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="self-center text-sm font-bold text-danger underline"
+      >
+        {label} 삭제하기
+      </button>
+      <ConfirmDialog
+        open={open}
+        title={`${label} 삭제`}
+        onClose={() => setOpen(false)}
+        onConfirm={() => {
+          setOpen(false)
+          onConfirm()
+        }}
+        confirmLabel="삭제하기"
+        cancelLabel="닫기"
+        admin
+      >
+        삭제한 {label}은(는) 되돌릴 수 없어요.
+      </ConfirmDialog>
+    </>
+  )
+}
+const requireFestival = (festivalId: number | undefined) => {
+  if (!festivalId) throw new Error('등록된 축제가 없어요. 축제를 먼저 등록해주세요.')
+  return festivalId
+}
+const toPin = (point: { x: number; y: number }): PinInput => ({
+  xPercent: Math.round(point.x * 100) / 100,
+  yPercent: Math.round(point.y * 100) / 100,
+})
 
 function TimeSelect({ name, initial }: { name: string; initial?: string }) {
   const times = Array.from(
@@ -68,10 +171,23 @@ export function NoticeFormPage() {
   const item = notices.find((n) => n.id === id)
   const [category, setCategory] = useState(item?.category || '긴급')
   const navigate = useNavigate()
+  const write = useAdminWrite()
   if (id && !item) return <NotFoundPage />
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const data = new FormData(event.currentTarget)
+    if (isApiMode) {
+      const input = {
+        title: value(data, 'title'),
+        content: value(data, 'body'),
+        category: fromLabel(noticeLabels, category),
+      }
+      void write.run(
+        () => (item ? api.admin.notices.update(item.id, input) : api.admin.notices.create(input)),
+        '/admin/notices',
+      )
+      return
+    }
     const next: Notice = {
       id: item?.id || `notice-${Date.now()}`,
       title: value(data, 'title'),
@@ -115,27 +231,72 @@ export function NoticeFormPage() {
             placeholder="공지 내용을 입력하세요."
           />
         </Field>
+        <FormError message={write.error} />
+        {isApiMode && item && (
+          <DeleteAction
+            label="공지"
+            onConfirm={() => write.run(() => api.admin.notices.remove(item.id), '/admin/notices')}
+          />
+        )}
       </form>
-      <SaveBar form="notice-form" cancel={() => navigate('/admin/notices')} />
+      <SaveBar form="notice-form" saving={write.saving} cancel={() => navigate('/admin/notices')} />
     </Page>
   )
 }
 export function PerformanceFormPage() {
   const { id } = useParams()
-  const { performances, setPerformances } = useDemo()
-  const item = performances.find((p) => p.id === id)
+  const { performances, dayOptions } = useDemo()
+  // The list response has no description, cast or setlist, so editing loads the detail.
+  const detail = useAsync(isApiMode && id ? () => api.performance(id) : null, [id])
+  if (isApiMode && id) {
+    if (detail.loading) return <StatusMessage>공연 정보를 불러오는 중이에요.</StatusMessage>
+    if (detail.error && !(detail.error instanceof ApiError && detail.error.status === 404))
+      return <StatusMessage onRetry={detail.reload}>{detail.error.message}</StatusMessage>
+  }
+  const item =
+    isApiMode && id
+      ? detail.data && toPerformance(detail.data, dayOptions)
+      : performances.find((p) => p.id === id)
+  if (id && !item) return <NotFoundPage />
+  return <PerformanceForm key={id ?? 'new'} item={item} />
+}
+function PerformanceForm({ item }: { item?: Performance }) {
+  const { setPerformances, festival, dayOptions, stageOptions } = useDemo()
   const [params] = useSearchParams()
-  const [day, setDay] = useState(item?.day || params.get('day') || '1')
-  const [stage, setStage] = useState(item?.stage || params.get('stage') || 'main')
+  const [day, setDay] = useState(item?.day || pickOption(dayOptions, params.get('day')))
+  const [stage, setStage] = useState(item?.stage || pickOption(stageOptions, params.get('stage')))
   const [kind, setKind] = useState(item?.kind || '밴드')
   const [timeError, setTimeError] = useState('')
   const navigate = useNavigate()
-  if (id && !item) return <NotFoundPage />
+  const write = useAdminWrite()
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const data = new FormData(event.currentTarget)
     if (value(data, 'end') <= value(data, 'time')) {
       setTimeError('종료 시간을 시작 시간 이후로 선택해주세요.')
+      return
+    }
+    setTimeError('')
+    if (isApiMode) {
+      const date = dayOptions.find((d) => d.value === day)?.date
+      void write.run(async () => {
+        if (!date) throw new Error('공연 날짜를 선택해주세요.')
+        const input = {
+          festivalId: requireFestival(festival?.festivalId),
+          stageId: Number(stage),
+          title: value(data, 'name'),
+          type: fromLabel(performanceLabels, kind),
+          description: value(data, 'description'),
+          additionalDescription: value(data, 'additionalDescription'),
+          castMembers: value(data, 'cast'),
+          setlist: value(data, 'setlist'),
+          startAt: toOffsetTime(date, value(data, 'time')),
+          endAt: toOffsetTime(date, value(data, 'end')),
+        }
+        return item
+          ? api.admin.performances.update(item.id, input)
+          : api.admin.performances.create(input)
+      }, `/admin/performances?day=${day}&stage=${stage}`)
       return
     }
     const next: Performance = {
@@ -232,8 +393,24 @@ export function PerformanceFormPage() {
             placeholder="셋리스트를 입력하세요."
           />
         </Field>
+        <FormError message={write.error} />
+        {isApiMode && item && (
+          <DeleteAction
+            label="무대 프로그램"
+            onConfirm={() =>
+              write.run(
+                () => api.admin.performances.remove(item.id),
+                `/admin/performances?day=${day}&stage=${stage}`,
+              )
+            }
+          />
+        )}
       </form>
-      <SaveBar form="performance-form" cancel={() => navigate('/admin/performances')} />
+      <SaveBar
+        form="performance-form"
+        saving={write.saving}
+        cancel={() => navigate('/admin/performances')}
+      />
     </Page>
   )
 }
@@ -316,8 +493,24 @@ function LocationPicker({
 }
 export function BoothFormPage() {
   const { id } = useParams()
-  const { booths, setBooths } = useDemo()
-  const item = booths.find((b) => b.id === id)
+  const { booths } = useDemo()
+  const listed = booths.find((b) => b.id === id)
+  // Booth descriptions only come with the detail response; facilities already carry theirs.
+  const needsDetail = isApiMode && !!listed && listed.period !== 'facility'
+  const detail = useAsync(needsDetail ? () => api.booth(listed!.id) : null, [listed?.id])
+  if (id && !listed) return <NotFoundPage />
+  if (needsDetail && detail.loading)
+    return <StatusMessage>부스 정보를 불러오는 중이에요.</StatusMessage>
+  if (needsDetail && detail.error)
+    return <StatusMessage onRetry={detail.reload}>{detail.error.message}</StatusMessage>
+  const item = listed && {
+    ...listed,
+    description: detail.data?.description ?? listed.description,
+  }
+  return <BoothForm key={id ?? 'new'} item={item} />
+}
+function BoothForm({ item }: { item?: Booth }) {
+  const { setBooths, festival } = useDemo()
   const [params, setParams] = useSearchParams()
   const initial = item?.period || params.get('period') || 'day'
   const [period, setPeriod] = useState<Booth['period']>(
@@ -327,10 +520,18 @@ export function BoothFormPage() {
     item?.category || (initial === 'facility' ? '상황실' : '총학생회'),
   )
   const [position, setPosition] = useState<{ x: number; y: number } | null>(item?.position ?? null)
+  const [waitingEnabled, setWaitingEnabled] = useState(item?.waitingEnabled ?? true)
   const facility = period === 'facility'
   const pickerOpen = params.get('location') === 'pick'
   const navigate = useNavigate()
-  if (id && !item) return <NotFoundPage />
+  const write = useAdminWrite()
+  // Booths and facilities are separate backend resources, so an edit keeps its kind.
+  const periodOptions = [
+    { value: 'day', label: '주간', sublabel: '09:00~17:00' },
+    { value: 'night', label: '야간', sublabel: '18:00~25:00' },
+    { value: 'facility', label: '시설' },
+  ].filter((o) => !isApiMode || !item || (item.period === 'facility') === (o.value === 'facility'))
+  const defaultHours = facility ? '24시간' : period === 'day' ? '09:00~17:00' : '18:00~25:00'
   const closePicker = () =>
     setParams(
       (previous) => {
@@ -342,6 +543,36 @@ export function BoothFormPage() {
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const data = new FormData(event.currentTarget)
+    if (isApiMode) {
+      const moved =
+        position && (position.x !== item?.position?.x || position.y !== item?.position?.y)
+      const common = {
+        name: value(data, 'name'),
+        description: value(data, 'description'),
+        place: value(data, 'place'),
+        operatingHours: item?.hours || defaultHours,
+        ...(moved ? { pin: toPin(position) } : {}),
+      }
+      void write.run(async () => {
+        const festivalId = requireFestival(festival?.festivalId)
+        if (facility) {
+          const input = { ...common, festivalId, type: fromLabel(facilityLabels, category) }
+          const facilityId = item?.id.replace('facility-', '')
+          return facilityId
+            ? api.admin.facilities.update(facilityId, input)
+            : api.admin.facilities.create(input)
+        }
+        const input = {
+          ...common,
+          festivalId,
+          organizerType: fromLabel(organizerLabels, category),
+          period: period === 'night' ? ('NIGHT' as const) : ('DAY' as const),
+          waitingEnabled,
+        }
+        return item ? api.admin.booths.update(item.id, input) : api.admin.booths.create(input)
+      }, `/admin/booths?period=${period}`)
+      return
+    }
     const next: Booth = {
       id: item?.id || `booth-${Date.now()}`,
       name: value(data, 'name'),
@@ -371,11 +602,7 @@ export function BoothFormPage() {
             setPeriod(v as Booth['period'])
             setCategory(v === 'facility' ? '상황실' : '총학생회')
           }}
-          options={[
-            { value: 'day', label: '주간', sublabel: '09:00~17:00' },
-            { value: 'night', label: '야간', sublabel: '18:00~25:00' },
-            { value: 'facility', label: '시설' },
-          ]}
+          options={periodOptions}
         />
       </div>
       {facility && (
@@ -439,8 +666,34 @@ export function BoothFormPage() {
             )}
           </button>
         </section>
+        {isApiMode && !facility && (
+          <label className="flex items-center gap-2 text-base font-bold">
+            <input
+              type="checkbox"
+              checked={waitingEnabled}
+              onChange={(e) => setWaitingEnabled(e.target.checked)}
+              className="size-5 accent-[#1d8a45]"
+            />
+            QR 웨이팅 사용
+          </label>
+        )}
+        <FormError message={write.error} />
+        {isApiMode && item && (
+          <DeleteAction
+            label={facility ? '시설' : '부스'}
+            onConfirm={() =>
+              write.run(
+                () =>
+                  facility
+                    ? api.admin.facilities.remove(item.id.replace('facility-', ''))
+                    : api.admin.booths.remove(item.id),
+                `/admin/booths?period=${period}`,
+              )
+            }
+          />
+        )}
       </form>
-      <SaveBar form="booth-form" cancel={() => navigate('/admin/booths')} />
+      <SaveBar form="booth-form" saving={write.saving} cancel={() => navigate('/admin/booths')} />
       <LocationPicker
         open={params.get('location') === 'pick'}
         onClose={closePicker}

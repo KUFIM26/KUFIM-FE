@@ -31,6 +31,7 @@ type DemoState = {
   // Catalog loading from the backend. Always `ready` with the mock data source.
   load: LoadState
   reload: () => void
+  refresh: () => Promise<void>
   festival: ApiFestival | null
   dayOptions: Option[]
   stageOptions: Option[]

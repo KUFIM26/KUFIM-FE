@@ -33,6 +33,19 @@ const optional = <T,>(promise: Promise<T>) =>
     throw error
   })
 
+async function fetchCatalog() {
+  const [festival, booths, facilities, stages, performances, notices] = await Promise.all([
+    optional(api.festival()),
+    api.booths(),
+    api.facilities(),
+    api.stages(),
+    api.performances(),
+    api.notices(),
+  ])
+  return { festival, booths, facilities, stages, performances, notices }
+}
+type Catalog = Awaited<ReturnType<typeof fetchCatalog>>
+
 export function DemoProvider({ children }: { children: ReactNode }) {
   const [booths, setBooths] = useState<Booth[]>(isApiMode ? [] : boothSeed)
   const [notices, setNotices] = useState<Notice[]>(isApiMode ? [] : noticeSeed)
@@ -52,26 +65,25 @@ export function DemoProvider({ children }: { children: ReactNode }) {
     setAttempt((n) => n + 1)
   }, [])
 
+  const applyCatalog = useCallback((catalog: Catalog) => {
+    const days = toDayOptions(catalog.festival, catalog.performances)
+    setFestival(catalog.festival)
+    setDayOptions(days)
+    setStageOptions(toStageOptions(catalog.stages))
+    setBooths([...catalog.booths.map(toBooth), ...catalog.facilities.map(toFacility)])
+    setPerformances(catalog.performances.map((p) => toPerformance(p, days)))
+    setNotices(catalog.notices.map(toNotice))
+  }, [])
+  // Re-reads the catalog after an admin save without showing the full-page loader.
+  const refresh = useCallback(() => fetchCatalog().then(applyCatalog), [applyCatalog])
+
   useEffect(() => {
     if (!isApiMode) return
     let active = true
-    Promise.all([
-      optional(api.festival()),
-      api.booths(),
-      api.facilities(),
-      api.stages(),
-      api.performances(),
-      api.notices(),
-    ])
-      .then(([festivalData, boothData, facilityData, stageData, performanceData, noticeData]) => {
+    fetchCatalog()
+      .then((catalog) => {
         if (!active) return
-        const days = toDayOptions(festivalData, performanceData)
-        setFestival(festivalData)
-        setDayOptions(days)
-        setStageOptions(toStageOptions(stageData))
-        setBooths([...boothData.map(toBooth), ...facilityData.map(toFacility)])
-        setPerformances(performanceData.map((p) => toPerformance(p, days)))
-        setNotices(noticeData.map(toNotice))
+        applyCatalog(catalog)
         setLoad({ status: 'ready' })
       })
       .catch((error: unknown) => {
@@ -84,7 +96,7 @@ export function DemoProvider({ children }: { children: ReactNode }) {
     return () => {
       active = false
     }
-  }, [attempt])
+  }, [attempt, applyCatalog])
 
   return (
     <DemoContext.Provider
@@ -103,6 +115,7 @@ export function DemoProvider({ children }: { children: ReactNode }) {
         setSettings,
         load,
         reload,
+        refresh,
         festival,
         dayOptions,
         stageOptions,

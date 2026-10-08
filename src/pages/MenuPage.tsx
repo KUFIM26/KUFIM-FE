@@ -38,7 +38,10 @@ export default function MenuPage({ admin = false }: { admin?: boolean }) {
       ],
     },
     { title: '기타', items: [['이용 안내', '/guide']] },
-  ]
+  ].filter(
+    // Content management is SUPER_ADMIN only on the backend; booth admins only run waitings.
+    (section) => !(admin && section.title === '정보' && account?.role === 'BOOTH_ADMIN'),
+  )
   return (
     <Page title={admin ? '관리자 메뉴' : '전체 메뉴'} plain nav={!admin}>
       <div className={`page-pad !pt-6 ${admin ? 'gap-5' : '!gap-3'}`}>
