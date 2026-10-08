@@ -5,6 +5,8 @@ export type AdminSession = {
   status: 'checking' | 'ready'
   account: ApiAdminAccount | null
   error: Error | null
+  // Starts the session check; called by admin pages only.
+  ensure: () => void
   login: (loginId: string, password: string) => Promise<void>
   logout: () => Promise<void>
   recheck: () => void

@@ -297,7 +297,7 @@ const account = (options: Options) => ({
 })
 
 test('catalog pages render backend data', async ({ page }) => {
-  await fakeBackend(page)
+  const backend = await fakeBackend(page)
   await page.goto('/')
   await expect(page.getByRole('heading', { name: '2026 테스트 대동제' })).toBeVisible()
   await expect(page.getByText('12개')).toBeVisible()
@@ -318,6 +318,8 @@ test('catalog pages render backend data', async ({ page }) => {
 
   await page.goto('/booths?period=facility')
   await expect(page.getByText('공학관 화장실')).toBeVisible()
+  // Public pages must not probe the admin session (it shows up as 401 noise for every visitor).
+  expect(backend.requests.filter((r) => r.url().includes('/api/v1/admin/'))).toEqual([])
 })
 
 test('catalog failure offers a retry', async ({ page }) => {

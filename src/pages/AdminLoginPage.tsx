@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAdminSession } from '../app/admin-session'
@@ -11,7 +11,7 @@ const safeNext = (value: string | null) =>
   value && value.startsWith('/admin') && !value.startsWith('//') ? value : '/admin'
 
 export default function AdminLoginPage() {
-  const { account, login } = useAdminSession()
+  const { account, ensure, login } = useAdminSession()
   const [params] = useSearchParams()
   const navigate = useNavigate()
   const [loginId, setLoginId] = useState('')
@@ -19,6 +19,7 @@ export default function AdminLoginPage() {
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const next = safeNext(params.get('next'))
+  useEffect(ensure, [ensure])
   if (!isApiMode || account) return <Navigate to={next} replace />
 
   const submit = async (event: FormEvent) => {
