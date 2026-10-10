@@ -78,7 +78,12 @@ async function send(path: string, options: RequestOptions) {
       // Proxies and gateways can answer with HTML; fall through to the generic message.
     }
     const code = envelope?.error?.code ?? `HTTP_${response.status}`
-    if (admin && response.status === 401 && !path.startsWith('/admin/auth/login'))
+    // 401 (session gone) or A005 (XSRF token lost) both need a fresh admin login.
+    if (
+      admin &&
+      !path.startsWith('/admin/auth/login') &&
+      (response.status === 401 || envelope?.error?.code === 'A005')
+    )
       window.dispatchEvent(new Event(adminUnauthorizedEvent))
     throw new ApiError(
       response.status,

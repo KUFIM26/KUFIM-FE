@@ -21,6 +21,7 @@ type Options = {
   role?: 'SUPER_ADMIN' | 'BOOTH_ADMIN'
   managedBoothIds?: number[]
   noFloorplan?: boolean
+  csrfExpired?: boolean
 }
 type Write = { method: string; path: string; body: Record<string, unknown> | null }
 const urgentNotice = {
@@ -42,6 +43,8 @@ const booth = {
   operatingHours: '10:00~17:00',
   waitingEnabled: true,
   waitingStatus: 'OPEN',
+  waitingTeamCount: 3,
+  estimatedWaitMinutes: 15,
   pin: null,
 }
 const ticket = (overrides: Partial<Ticket> = {}): Ticket => ({
@@ -172,6 +175,8 @@ async function fakeBackend(page: Page, options: Options = {}) {
       const [, verb, kind, id] = content
       const body = request.postData() ? (request.postDataJSON() as Record<string, unknown>) : null
       state.writes.push({ method: verb, path: path, body })
+      if (options.csrfExpired)
+        return fail(403, 'A005', '보안 토큰이 만료되었습니다. 다시 로그인해 주세요.')
       if (body?.pin && options.noFloorplan) return fail(404, 'M003', '등록된 도면이 없습니다.')
       if (kind === 'notices') {
         const notice = state.notices.find((n) => String(n.noticeId) === id)
@@ -844,4 +849,22 @@ test('the admin records congestion in one tap and adds zones', async ({ page }) 
     path: '/admin/stages/1/zones',
     body: { name: 'VIP 구역', displayOrder: 3 },
   })
+})
+
+test('booth lists show the waiting count from the list response', async ({ page }) => {
+  await fakeBackend(page)
+  await page.goto('/booths')
+  const row = page.getByRole('link', { name: /컴공 주점/ })
+  await expect(row.getByText('3팀')).toBeVisible()
+  await expect(row.getByText('15분')).toBeVisible()
+})
+
+test('an expired XSRF token sends the admin back to the login page', async ({ page }) => {
+  const backend = await fakeBackend(page, { csrfExpired: true })
+  await asSuperAdmin(page, backend)
+  await page.goto('/admin/notices/new')
+  await page.getByLabel('공지 제목').fill('토큰 만료 확인')
+  await page.getByLabel('공지 내용').fill('내용')
+  await page.getByRole('button', { name: '저장하기' }).click()
+  await expect(page).toHaveURL(/\/admin\/login/)
 })

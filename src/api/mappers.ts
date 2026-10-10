@@ -86,6 +86,8 @@ export function toBooth(item: ApiBooth): Booth {
     position: item.pin ? { x: item.pin.xPercent, y: item.pin.yPercent } : undefined,
     waitingEnabled: item.waitingEnabled,
     waitingStatus: item.waitingStatus,
+    teams: item.waitingTeamCount ?? undefined,
+    minutes: item.estimatedWaitMinutes ?? undefined,
   }
 }
 

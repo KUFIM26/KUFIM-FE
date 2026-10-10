@@ -20,8 +20,11 @@ export function useLiveBooth(booth: Booth | undefined, pollMs = 15000) {
       ? {
           ...booth,
           description: detail.data?.description ?? booth.description,
-          teams: booth.waitingEnabled ? status.data?.waitingTeamCount : undefined,
-          minutes: booth.waitingEnabled ? status.data?.estimatedWaitMinutes : undefined,
+          // The live status wins; the list value shows until it arrives.
+          teams: booth.waitingEnabled ? (status.data?.waitingTeamCount ?? booth.teams) : undefined,
+          minutes: booth.waitingEnabled
+            ? (status.data?.estimatedWaitMinutes ?? booth.minutes)
+            : undefined,
         }
       : booth
   return { booth: live, status }

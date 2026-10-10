@@ -67,6 +67,9 @@ export type ApiBooth = {
   operatingHours: string | null
   waitingEnabled: boolean
   waitingStatus: AcceptingStatus | 'DISABLED'
+  // Present in list responses; null when the booth does not use waiting.
+  waitingTeamCount?: number | null
+  estimatedWaitMinutes?: number | null
   pin: Pin
   description?: string | null
   myActiveWaitingId?: string | null
