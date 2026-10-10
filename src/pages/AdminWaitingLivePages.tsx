@@ -8,6 +8,7 @@ import { Asset, Button, Card, ConfirmDialog, EmptyState, SectionTitle } from '..
 import { FestivalMeta, Stats } from '../components/festival'
 import { figmaAssets as assets } from '../data/figma-assets'
 import { NotFoundPage } from './UtilityPages'
+import { CsvDownload } from '../components/CsvDownload'
 import { api } from '../api/endpoints'
 import { ApiError } from '../api/client'
 import { kst, minutesBetween } from '../api/mappers'
@@ -41,7 +42,7 @@ function NotManaged() {
 
 export function LiveAdminWaitingListPage() {
   const { booths } = useDemo()
-  const { canManage } = useAdminSession()
+  const { canManage, account } = useAdminSession()
   const items = booths.filter((b) => b.period !== 'facility' && b.waitingEnabled && canManage(b.id))
   return (
     <Page title="QR 웨이팅 관리" back="/admin">
@@ -65,6 +66,14 @@ export function LiveAdminWaitingListPage() {
             <EmptyState>웨이팅을 운영하는 담당 부스가 없어요.</EmptyState>
           )}
         </section>
+        {account?.role === 'SUPER_ADMIN' && (
+          // History without student numbers or phone numbers, for the post-festival report.
+          <CsvDownload
+            label="웨이팅 이력 CSV 내려받기"
+            filename="kufim-waitings.csv"
+            load={api.admin.waitingsCsv}
+          />
+        )}
       </div>
     </Page>
   )

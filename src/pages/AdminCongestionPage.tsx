@@ -6,6 +6,7 @@ import { useAdminSession } from '../app/admin-session'
 import { InlineError, Page } from '../components/layout'
 import { Card, ConfirmDialog, EmptyState, SectionTitle, Tabs } from '../components/ui'
 import { CongestionBadge } from '../components/congestion'
+import { CsvDownload } from '../components/CsvDownload'
 import { pickOption } from '../components/options'
 import { isApiMode } from '../api/config'
 import { api } from '../api/endpoints'
@@ -35,7 +36,6 @@ export default function AdminCongestionPage() {
   const [error, setError] = useState('')
   const [newZone, setNewZone] = useState('')
   const [deleting, setDeleting] = useState<ApiAdminZone | null>(null)
-  const [downloading, setDownloading] = useState(false)
 
   if (!isApiMode)
     return (
@@ -71,22 +71,6 @@ export default function AdminCongestionPage() {
       await api.admin.createZone(Number(stageId), name, (zones.data?.zones.length ?? 0) + 1)
       setNewZone('')
     })
-  }
-  const download = async () => {
-    setDownloading(true)
-    setError('')
-    try {
-      const url = URL.createObjectURL(await api.admin.congestionCsv())
-      const link = document.createElement('a')
-      link.href = url
-      link.download = 'kufim-congestion.csv'
-      link.click()
-      window.setTimeout(() => URL.revokeObjectURL(url), 1000)
-    } catch (reason) {
-      setError((reason as Error).message)
-    } finally {
-      setDownloading(false)
-    }
   }
   const list = zones.data?.zones ?? []
   const active = list.filter((z) => z.active)
@@ -172,14 +156,11 @@ export default function AdminCongestionPage() {
             </Card>
           </section>
         )}
-        <button
-          type="button"
-          onClick={download}
-          disabled={downloading}
-          className="self-center text-sm font-bold text-brand underline disabled:opacity-50"
-        >
-          {downloading ? '내려받는 중…' : '혼잡도 이력 CSV 내려받기'}
-        </button>
+        <CsvDownload
+          label="혼잡도 이력 CSV 내려받기"
+          filename="kufim-congestion.csv"
+          load={api.admin.congestionCsv}
+        />
       </div>
       <ConfirmDialog
         open={!!deleting}

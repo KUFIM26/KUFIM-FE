@@ -110,6 +110,7 @@ export const api = {
         body: { level, estimatedPeople },
       }),
     congestionCsv: () => requestBlob('/admin/analytics/congestion.csv', 'text/csv'),
+    waitingsCsv: () => requestBlob('/admin/analytics/waitings.csv', 'text/csv'),
     issueQr: (boothId: string) =>
       request<{ boothCode: string; url: string }>(`/admin/booths/${boothId}/qr`, {
         method: 'POST',
