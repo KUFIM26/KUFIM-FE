@@ -23,6 +23,7 @@ export type ApiFestival = {
     stageEntrySummary: { stageId: number; entryStatus: string }[]
   }
 }
+export type ApiFloorplan = { imageUrl: string; width: number; height: number }
 export type CongestionLevel = 'SMOOTH' | 'NORMAL' | 'CROWDED' | 'VERY_CROWDED'
 export type ApiZone = {
   zoneId: number

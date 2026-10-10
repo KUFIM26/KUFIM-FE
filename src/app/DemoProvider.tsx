@@ -9,7 +9,7 @@ import { isApiMode } from '../api/config'
 import { pollEvery, useRealtimeConnected, useTopic } from '../api/realtime'
 import { api } from '../api/endpoints'
 import { ApiError } from '../api/client'
-import type { ApiFestival, ApiStage, ApiZone } from '../api/types'
+import type { ApiFestival, ApiFloorplan, ApiStage, ApiZone } from '../api/types'
 import {
   toBooth,
   toDayOptions,
@@ -35,15 +35,25 @@ const optional = <T,>(promise: Promise<T>) =>
   })
 
 async function fetchCatalog() {
-  const [festival, booths, facilities, stages, performances, notices] = await Promise.all([
+  const [festival, booths, facilities, stages, performances, notices, map] = await Promise.all([
     optional(api.festival()),
     api.booths(),
     api.facilities(),
     api.stages(),
     api.performances(),
     api.notices(),
+    // No floorplan yet answers 404; the map then shows the design image without pins.
+    optional(api.map()),
   ])
-  return { festival, booths, facilities, stages, performances, notices }
+  return {
+    festival,
+    booths,
+    facilities,
+    stages,
+    performances,
+    notices,
+    floorplan: map?.floorplan ?? null,
+  }
 }
 type Catalog = Awaited<ReturnType<typeof fetchCatalog>>
 
@@ -61,6 +71,7 @@ export function DemoProvider({ children }: { children: ReactNode }) {
   const [dayOptions, setDayOptions] = useState(mockDays)
   const [stageOptions, setStageOptions] = useState(mockStages)
   const [stages, setStages] = useState<ApiStage[]>([])
+  const [floorplan, setFloorplan] = useState<ApiFloorplan | null>(null)
   // Server clock minus device clock, so the 15-minute congestion check ignores device time.
   const [clockOffset, setClockOffset] = useState(0)
   const [attempt, setAttempt] = useState(0)
@@ -86,6 +97,7 @@ export function DemoProvider({ children }: { children: ReactNode }) {
     (catalog: Catalog) => {
       const days = toDayOptions(catalog.festival, catalog.performances)
       setFestival(catalog.festival)
+      setFloorplan(catalog.floorplan)
       setDayOptions(days)
       setStageOptions(toStageOptions(catalog.stages))
       applyStages(catalog.stages)
@@ -188,6 +200,7 @@ export function DemoProvider({ children }: { children: ReactNode }) {
         stageOptions,
         stages,
         clockOffset,
+        floorplan,
       }}
     >
       {children}

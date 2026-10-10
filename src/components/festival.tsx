@@ -5,6 +5,7 @@ import { facilities } from '../data/mock'
 import type { Booth, Performance, Notice } from '../data/mock'
 import { useDemo } from '../app/demo-context'
 import { kst } from '../api/mappers'
+import type { ApiFloorplan } from '../api/types'
 
 export function EmergencyBanner({
   dismiss,
@@ -229,6 +230,60 @@ export function MapImage({
         alt="건국대학교 서울캠퍼스와 일감호 일대 축제 지도"
         draggable={false}
       />
+    </div>
+  )
+}
+
+export type MapPinItem = { id: string; name: string; x: number; y: number; to?: string }
+
+// The registered floorplan at its own aspect ratio; pins use the same percent coordinates
+// as the backend (x/y of the whole image), so the picker and the map always agree.
+export function FloorplanMap({
+  floorplan,
+  pins = [],
+  className = '',
+}: {
+  floorplan: ApiFloorplan
+  pins?: MapPinItem[]
+  className?: string
+}) {
+  return (
+    <div
+      className={`relative w-full ${className}`}
+      style={{ aspectRatio: `${floorplan.width} / ${floorplan.height}` }}
+    >
+      <img
+        src={floorplan.imageUrl}
+        alt="축제 지도 도면"
+        draggable={false}
+        className="absolute inset-0 size-full max-w-none object-fill"
+      />
+      {pins.map((pin) => {
+        const marker = <Asset src={assets['53:1227'].imgGroup2} />
+        const style = { left: `${pin.x}%`, top: `${pin.y}%` }
+        const classes = 'absolute -translate-x-1/2 -translate-y-full'
+        return pin.to ? (
+          <Link
+            key={pin.id}
+            to={pin.to}
+            aria-label={`${pin.name} 위치`}
+            className={classes}
+            style={style}
+          >
+            {marker}
+          </Link>
+        ) : (
+          <span
+            key={pin.id}
+            role="img"
+            aria-label={`${pin.name} 위치`}
+            className={classes}
+            style={style}
+          >
+            {marker}
+          </span>
+        )
+      })}
     </div>
   )
 }

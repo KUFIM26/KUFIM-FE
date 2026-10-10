@@ -22,6 +22,7 @@ type Options = {
   managedBoothIds?: number[]
   noFloorplan?: boolean
   csrfExpired?: boolean
+  floorplan?: boolean
 }
 type Write = { method: string; path: string; body: Record<string, unknown> | null }
 const urgentNotice = {
@@ -211,12 +212,20 @@ async function fakeBackend(page: Page, options: Options = {}) {
             stageEntrySummary: [{ stageId: 1, entryStatus: 'RESTRICTED' }],
           },
         })
+      case 'GET /map':
+        if (!options.floorplan) return fail(404, 'M003', '등록된 도면이 없습니다.')
+        return ok({
+          floorplan: { imageUrl: '/assets/figma/53-1227-a5341.png', width: 400, height: 600 },
+        })
+      case 'POST /admin/map/floorplans':
+        state.writes.push({ method: 'POST', path, body: request.postDataJSON() })
+        return ok({ floorplanId: 1 }, 201)
       case 'GET /booths':
         if (state.catalogFailures > 0) {
           state.catalogFailures--
           return fail(500, 'C999', '일시적인 오류입니다.')
         }
-        return ok([booth])
+        return ok([options.floorplan ? { ...booth, pin: { xPercent: 30, yPercent: 40 } } : booth])
       case 'GET /booths/7':
         return ok({ ...booth, description: '컴퓨터공학부가 운영하는 주점입니다.' })
       case 'GET /booths/code/abc123':
@@ -867,4 +876,34 @@ test('an expired XSRF token sends the admin back to the login page', async ({ pa
   await page.getByLabel('공지 내용').fill('내용')
   await page.getByRole('button', { name: '저장하기' }).click()
   await expect(page).toHaveURL(/\/admin\/login/)
+})
+
+test('booth pins sit on the registered floorplan and link to the booth', async ({ page }) => {
+  await fakeBackend(page, { floorplan: true })
+  await page.goto('/map')
+  const pin = page.getByRole('link', { name: '컴공 주점 위치' })
+  await expect(pin).toBeVisible()
+  const style = await pin.getAttribute('style')
+  expect(style).toContain('left: 30%')
+  expect(style).toContain('top: 40%')
+  await pin.click()
+  await expect(page).toHaveURL(/\/booths\/7$/)
+})
+
+test('the admin registers a floorplan with the size read from the image', async ({ page }) => {
+  const backend = await fakeBackend(page)
+  await asSuperAdmin(page, backend)
+  await page.goto('/admin')
+  await page.getByRole('link', { name: '축제 지도 도면' }).click()
+  await page.getByLabel('도면 이미지 주소').fill('http://tracker.example.com/map.png')
+  await page.getByRole('button', { name: '불러오기' }).click()
+  await expect(page.getByRole('alert')).toContainText('https 주소만')
+  await page.getByLabel('도면 이미지 주소').fill('/assets/figma/53-1227-a5341.png')
+  await page.getByRole('button', { name: '불러오기' }).click()
+  await page.getByRole('button', { name: '이 도면으로 등록하기' }).click()
+  await expect.poll(() => backend.writes.at(-1)?.path).toBe('/admin/map/floorplans')
+  const body = backend.writes.at(-1)!.body!
+  expect(body).toMatchObject({ festivalId: 1, imageUrl: '/assets/figma/53-1227-a5341.png' })
+  expect(body.width).toBeGreaterThan(0)
+  expect(body.height).toBeGreaterThan(0)
 })

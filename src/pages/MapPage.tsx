@@ -2,12 +2,12 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { useDemo } from '../app/demo-context'
 import { Page } from '../components/layout'
 import { Asset, Chips, EmptyState, Tabs } from '../components/ui'
-import { BoothRow, FacilityFilters, MapImage } from '../components/festival'
+import { BoothRow, FacilityFilters, FloorplanMap, MapImage } from '../components/festival'
 import { boothCategories } from '../data/mock'
 import { figmaAssets as assets } from '../data/figma-assets'
 
 export default function MapPage() {
-  const { booths } = useDemo()
+  const { booths, floorplan } = useDemo()
   const [params, setParams] = useSearchParams()
   const period = params.get('period') === 'night' ? 'night' : 'day'
   const category = params.get('category') || '전체'
@@ -58,7 +58,25 @@ export default function MapPage() {
         }}
       />
       <div className="relative min-h-[652px]" style={{ height: 'calc(100dvh - 246px)' }}>
-        <MapImage className="absolute inset-0" />
+        {floorplan ? (
+          // Registered floorplan with a pin for every listed booth or facility that has a location.
+          <div className="absolute inset-0 overflow-auto bg-[#eef1ee]">
+            <FloorplanMap
+              floorplan={floorplan}
+              pins={items
+                .filter((b) => b.position)
+                .map((b) => ({
+                  id: b.id,
+                  name: b.name,
+                  x: b.position!.x,
+                  y: b.position!.y,
+                  to: `/booths/${b.id}`,
+                }))}
+            />
+          </div>
+        ) : (
+          <MapImage className="absolute inset-0" />
+        )}
         {!list && (
           <button
             type="button"

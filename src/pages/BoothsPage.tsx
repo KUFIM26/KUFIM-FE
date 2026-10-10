@@ -1,7 +1,13 @@
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useDemo } from '../app/demo-context'
 import { BottomActions, Page } from '../components/layout'
-import { BoothRow, FacilityFilters, MapImage, WaitingNumbers } from '../components/festival'
+import {
+  BoothRow,
+  FacilityFilters,
+  FloorplanMap,
+  MapImage,
+  WaitingNumbers,
+} from '../components/festival'
 import { Card, Chips, EmptyState, Tabs } from '../components/ui'
 import { boothCategories } from '../data/mock'
 import { NotFoundPage } from './UtilityPages'
@@ -68,7 +74,7 @@ export function BoothsPage({ admin = false }: { admin?: boolean }) {
 }
 export function BoothDetailPage() {
   const { id } = useParams()
-  const { booths } = useDemo()
+  const { booths, floorplan } = useDemo()
   const listed = booths.find((b) => b.id === id)
   const { booth } = useLiveBooth(listed)
   if (!booth) return <NotFoundPage />
@@ -88,8 +94,15 @@ export function BoothDetailPage() {
           <h2 className="font-bold">{booth.period === 'facility' ? '시설' : '부스'} 소개</h2>
           <p className="mt-2 text-xs">{booth.description}</p>
         </Card>
-        <Link to="/map" aria-label="축제 지도에서 위치 보기">
-          <MapImage variant="mini" className="h-50 rounded-xl" />
+        <Link to="/map" aria-label="축제 지도에서 위치 보기" className="overflow-hidden rounded-xl">
+          {floorplan && booth.position ? (
+            <FloorplanMap
+              floorplan={floorplan}
+              pins={[{ id: booth.id, name: booth.name, x: booth.position.x, y: booth.position.y }]}
+            />
+          ) : (
+            <MapImage variant="mini" className="h-50 rounded-xl" />
+          )}
         </Link>
         {booth.period !== 'facility' && (
           <>

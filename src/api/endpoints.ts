@@ -14,6 +14,7 @@ import type {
   ApiWaitingConfig,
   ApiWaitingStatus,
   ApiAdminZone,
+  ApiFloorplan,
   CongestionLevel,
   BoothInput,
   FacilityInput,
@@ -40,6 +41,7 @@ export const api = {
   booth: (id: string) => request<ApiBooth>(`/booths/${id}`),
   boothByCode: (code: string) => request<ApiBooth>(`/booths/code/${encodeURIComponent(code)}`),
   facilities: () => request<ApiFacility[]>('/facilities'),
+  map: () => request<{ floorplan: ApiFloorplan }>('/map'),
   notices: () => request<ApiNotice[]>('/notices'),
   notice: (id: string) => request<ApiNotice>(`/notices/${id}`),
 
@@ -110,6 +112,8 @@ export const api = {
         body: { level, estimatedPeople },
       }),
     congestionCsv: () => requestBlob('/admin/analytics/congestion.csv', 'text/csv'),
+    createFloorplan: (input: ApiFloorplan & { festivalId: number }) =>
+      request<unknown>('/admin/map/floorplans', { method: 'POST', body: input }),
     waitingsCsv: () => requestBlob('/admin/analytics/waitings.csv', 'text/csv'),
     issueQr: (boothId: string) =>
       request<{ boothCode: string; url: string }>(`/admin/booths/${boothId}/qr`, {

@@ -37,7 +37,10 @@ export default function MenuPage({ admin = false }: { admin?: boolean }) {
         [admin ? 'QR 웨이팅 관리' : 'QR 웨이팅', admin ? '/admin/waiting' : '/waiting'],
         // Congestion input is SUPER_ADMIN only and needs the backend.
         ...(admin && isApiMode && account?.role === 'SUPER_ADMIN'
-          ? [['혼잡도 입력', '/admin/congestion']]
+          ? [
+              ['혼잡도 입력', '/admin/congestion'],
+              ['축제 지도 도면', '/admin/map'],
+            ]
           : []),
         ['긴급 신고', '/report'],
       ],
