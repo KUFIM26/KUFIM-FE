@@ -6,7 +6,8 @@ import { getClientToken } from './token'
 
 // One shared STOMP connection to KUFIM-BE's /ws. Messages only say "something changed";
 // pages re-read the data over REST, so a missed message is repaired by the next poll.
-type Entry = { destination: string; listeners: Set<() => void>; sub?: StompSubscription }
+type Listener = (body: unknown) => void
+type Entry = { destination: string; listeners: Set<Listener>; sub?: StompSubscription }
 const entries = new Map<string, Entry>()
 const stateListeners = new Set<() => void>()
 let connected = false
@@ -26,9 +27,15 @@ function setConnected(value: boolean) {
 }
 function attach(entry: Entry) {
   if (!client?.connected || entry.sub) return
-  entry.sub = client.subscribe(entry.destination, () =>
-    entry.listeners.forEach((listener) => listener()),
-  )
+  entry.sub = client.subscribe(entry.destination, (message) => {
+    let body: unknown = null
+    try {
+      body = JSON.parse(message.body)
+    } catch {
+      // Payloads are JSON; anything else is still a "changed" signal.
+    }
+    entry.listeners.forEach((listener) => listener(body))
+  })
 }
 
 function ensureClient() {
@@ -82,7 +89,7 @@ export async function reconnectRealtime() {
   if (entries.size) ensureClient()
 }
 
-export function subscribe(destination: string, listener: () => void) {
+export function subscribe(destination: string, listener: Listener) {
   let entry = entries.get(destination)
   if (!entry) {
     entry = { destination, listeners: new Set() }
@@ -110,14 +117,14 @@ export const useRealtimeConnected = () => useSyncExternalStore(subscribeState, (
 
 // Calls `onChange` for each message on `destination` (null pauses the subscription).
 // Returns whether the realtime connection is up, so callers can slow their polling.
-export function useTopic(destination: string | null, onChange: () => void) {
+export function useTopic(destination: string | null, onChange: (body: unknown) => void) {
   const handler = useRef(onChange)
   useEffect(() => {
     handler.current = onChange
   })
   useEffect(() => {
     if (!isApiMode || !destination) return
-    return subscribe(destination, () => handler.current())
+    return subscribe(destination, (body) => handler.current(body))
   }, [destination])
   const live = useRealtimeConnected()
   return isApiMode && !!destination && live

@@ -5,6 +5,7 @@ import { figmaAssets as assets } from '../data/figma-assets'
 import { useDemo } from '../app/demo-context'
 import { useAdminSession } from '../app/admin-session'
 import { kst } from '../api/mappers'
+import { isApiMode } from '../api/config'
 
 const monthDay = (iso: string) => {
   const t = kst(iso)
@@ -34,6 +35,10 @@ export default function MenuPage({ admin = false }: { admin?: boolean }) {
       items: [
         ['행사장 지도', '/map'],
         [admin ? 'QR 웨이팅 관리' : 'QR 웨이팅', admin ? '/admin/waiting' : '/waiting'],
+        // Congestion input is SUPER_ADMIN only and needs the backend.
+        ...(admin && isApiMode && account?.role === 'SUPER_ADMIN'
+          ? [['혼잡도 입력', '/admin/congestion']]
+          : []),
         ['긴급 신고', '/report'],
       ],
     },

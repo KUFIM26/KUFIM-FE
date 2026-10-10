@@ -67,6 +67,30 @@ async function fakeBackend(page: Page, options: Options = {}) {
     // Admin content writes, and the notice list they change.
     writes: [] as Write[],
     notices: [{ ...urgentNotice }] as (typeof urgentNotice)[],
+    zones: [
+      {
+        zoneId: 1,
+        stageId: 1,
+        name: '스탠딩 A구역',
+        displayOrder: 1,
+        level: 'NORMAL',
+        estimatedPeople: 300,
+        updatedAt: '2026-09-30T12:57:00+09:00',
+        active: true,
+        recordedBy: '테스트 관리자',
+      },
+      {
+        zoneId: 2,
+        stageId: 1,
+        name: '입장 대기열',
+        displayOrder: 2,
+        level: 'CROWDED',
+        estimatedPeople: null,
+        updatedAt: '2026-09-30T12:40:00+09:00',
+        active: true,
+        recordedBy: '테스트 관리자',
+      },
+    ] as Record<string, unknown>[],
   }
   const active = () => state.tickets.filter((t) => t.status === 'WAITING' || t.status === 'CALLED')
   const view = (t: Ticket) => {
@@ -112,6 +136,34 @@ async function fakeBackend(page: Page, options: Options = {}) {
       if (request.headers()['x-xsrf-token'] !== 'csrf-123')
         return fail(403, 'A003', '접근 권한이 없습니다.')
 
+    const zoneWrite =
+      /^(POST \/admin\/stages\/1\/zones|POST \/admin\/zones\/(\d+)\/congestion)$/.exec(key)
+    if (zoneWrite) {
+      const body = request.postDataJSON() as Record<string, unknown>
+      state.writes.push({ method: 'POST', path, body })
+      if (zoneWrite[2]) {
+        const zone = state.zones.find((z) => String(z.zoneId) === zoneWrite[2])!
+        Object.assign(zone, {
+          level: body.level,
+          estimatedPeople: body.estimatedPeople,
+          updatedAt: now,
+        })
+        return ok(zone, 201)
+      }
+      const zone = {
+        zoneId: 3,
+        stageId: 1,
+        name: body.name,
+        displayOrder: body.displayOrder,
+        level: null,
+        estimatedPeople: null,
+        updatedAt: null,
+        active: true,
+        recordedBy: null,
+      }
+      state.zones.push(zone)
+      return ok(zone, 201)
+    }
     const content =
       /^(POST|PATCH|DELETE) \/admin\/(notices|performances|booths|facilities)(?:\/(\d+))?$/.exec(
         key,
@@ -201,11 +253,32 @@ async function fakeBackend(page: Page, options: Options = {}) {
             pin: null,
           },
         ])
-      case 'GET /stages':
+      case 'GET /stages': {
+        const zonesOf = (id: number) =>
+          state.zones
+            .filter((z) => z.stageId === id && z.active)
+            .map(({ active: _active, recordedBy: _recordedBy, ...z }) => z)
         return ok([
-          { stageId: 2, name: '서브무대', entryStatus: 'OPEN', displayOrder: 2 },
-          { stageId: 1, name: '노천극장', entryStatus: 'RESTRICTED', displayOrder: 1 },
+          {
+            stageId: 2,
+            name: '서브무대',
+            entryStatus: 'OPEN',
+            displayOrder: 2,
+            zones: zonesOf(2),
+            serverTime: now,
+          },
+          {
+            stageId: 1,
+            name: '노천극장',
+            entryStatus: 'RESTRICTED',
+            displayOrder: 1,
+            zones: zonesOf(1),
+            serverTime: now,
+          },
         ])
+      }
+      case 'GET /admin/stages/1/zones':
+        return ok({ serverTime: now, zones: state.zones.filter((z) => z.stageId === 1) })
       case 'GET /performances':
         return ok([
           {
@@ -646,7 +719,7 @@ async function fakeStomp(page: Page) {
 
 test('a call reaches the waiting page over STOMP without reloading', async ({ page }) => {
   const waiting = ticket()
-  const backend = await fakeBackend(page, { tickets: [waiting] })
+  await fakeBackend(page, { tickets: [waiting] })
   const stomp = await fakeStomp(page)
   await page.goto('/waiting')
   await expect(page.getByText('1번째')).toBeVisible()
@@ -699,4 +772,76 @@ test('the admin queue refreshes on its STOMP topic', async ({ page }) => {
   )
   stomp.push('/topic/admin/booth/7/waiting', { type: 'WAITING_LIST_CHANGED', boothId: 7 })
   await expect(page.getByText('2번', { exact: true })).toBeVisible({ timeout: 3000 })
+})
+
+test('stage congestion shows color, label and gauge, and expires after 15 minutes', async ({
+  page,
+}) => {
+  await fakeBackend(page)
+  await page.goto('/')
+  const stage = page.getByRole('region', { name: '노천극장 혼잡도' })
+  await expect(stage.getByText('스탠딩 A구역')).toBeVisible()
+  await expect(stage.getByRole('img', { name: '혼잡도 보통, 4단계 중 2단계' })).toBeVisible()
+  await expect(stage.getByText('약 300명')).toBeVisible()
+  await expect(stage.getByText('3분 전 갱신')).toBeVisible()
+  // 12:40 is 20 minutes before the server time: shown as unknown, without the old level.
+  await expect(stage.getByRole('img', { name: '혼잡도 정보 확인 중' })).toBeVisible()
+  await expect(stage.getByText('혼잡', { exact: true })).toHaveCount(0)
+  await expect(page.getByRole('region', { name: '서브무대 혼잡도' })).toHaveCount(0)
+})
+
+test('a congestion broadcast updates the zone without another request', async ({ page }) => {
+  const backend = await fakeBackend(page)
+  const stomp = await fakeStomp(page)
+  await page.goto('/')
+  await expect(page.getByRole('img', { name: '혼잡도 보통, 4단계 중 2단계' })).toBeVisible()
+  await expect.poll(() => stomp.subscribed('/topic/congestion')).toBe(true)
+  const before = backend.requests.length
+  stomp.push('/topic/congestion', {
+    type: 'CONGESTION_UPDATED',
+    zoneId: 1,
+    stageId: 1,
+    name: '스탠딩 A구역',
+    displayOrder: 1,
+    level: 'VERY_CROWDED',
+    estimatedPeople: 800,
+    updatedAt: now,
+  })
+  await expect(page.getByRole('img', { name: '혼잡도 매우 혼잡, 4단계 중 4단계' })).toBeVisible({
+    timeout: 3000,
+  })
+  await expect(page.getByText('약 800명')).toBeVisible()
+  expect(backend.requests.slice(before).map((r) => r.url())).toEqual([])
+})
+
+test('the admin records congestion in one tap and adds zones', async ({ page }) => {
+  const backend = await fakeBackend(page)
+  await asSuperAdmin(page, backend)
+  await page.goto('/admin')
+  await page.getByRole('link', { name: '혼잡도 입력' }).click()
+  await expect(page).toHaveURL(/\/admin\/congestion$/)
+  const card = page.locator('.card').filter({ hasText: '스탠딩 A구역' })
+  await card.getByRole('button', { name: '+50' }).click()
+  await card.getByRole('button', { name: '+50' }).click()
+  await card.getByRole('button', { name: '매우 혼잡' }).click()
+  await expect
+    .poll(() => backend.writes.at(-1)?.body)
+    .toEqual({ level: 'VERY_CROWDED', estimatedPeople: 400 })
+  expect(backend.writes.at(-1)?.path).toBe('/admin/zones/1/congestion')
+  // 12:40 input is past the 5-minute recommendation.
+  await expect(
+    page
+      .locator('.card')
+      .filter({ hasText: '입장 대기열' })
+      .getByText(/갱신 필요/),
+  ).toBeVisible()
+
+  await page.getByLabel('새 구역 이름').fill('VIP 구역')
+  await page.getByRole('button', { name: '구역 추가' }).click()
+  await expect(page.locator('.card').filter({ hasText: 'VIP 구역' })).toBeVisible()
+  expect(backend.writes.at(-1)).toEqual({
+    method: 'POST',
+    path: '/admin/stages/1/zones',
+    body: { name: 'VIP 구역', displayOrder: 3 },
+  })
 })

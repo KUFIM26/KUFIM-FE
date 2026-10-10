@@ -23,7 +23,26 @@ export type ApiFestival = {
     stageEntrySummary: { stageId: number; entryStatus: string }[]
   }
 }
-export type ApiStage = { stageId: number; name: string; entryStatus: string; displayOrder: number }
+export type CongestionLevel = 'SMOOTH' | 'NORMAL' | 'CROWDED' | 'VERY_CROWDED'
+export type ApiZone = {
+  zoneId: number
+  stageId: number
+  name: string
+  displayOrder: number
+  level: CongestionLevel | null
+  estimatedPeople: number | null
+  updatedAt: string | null
+}
+export type ApiAdminZone = ApiZone & { active: boolean; recordedBy: string | null }
+export type ApiStage = {
+  stageId: number
+  name: string
+  entryStatus: string
+  displayOrder: number
+  // Active zones with their latest congestion, and the server clock for the 15-minute check.
+  zones?: ApiZone[]
+  serverTime?: string
+}
 export type ApiPerformance = {
   performanceId: number
   title: string

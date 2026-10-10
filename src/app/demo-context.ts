@@ -3,7 +3,7 @@ import type { Dispatch, SetStateAction } from 'react'
 import { queueSeed } from '../data/mock'
 import type { Booth, Notice, Performance } from '../data/mock'
 import type { Option } from '../components/ui'
-import type { ApiFestival } from '../api/types'
+import type { ApiFestival, ApiStage } from '../api/types'
 
 export type Ticket = {
   boothId: string
@@ -35,6 +35,9 @@ type DemoState = {
   festival: ApiFestival | null
   dayOptions: Option[]
   stageOptions: Option[]
+  // Stages with their active zones and latest congestion (API mode only).
+  stages: ApiStage[]
+  clockOffset: number
 }
 export const DemoContext = createContext<DemoState | null>(null)
 export function useDemo() {

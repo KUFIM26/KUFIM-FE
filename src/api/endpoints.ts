@@ -13,6 +13,8 @@ import type {
   ApiTicket,
   ApiWaitingConfig,
   ApiWaitingStatus,
+  ApiAdminZone,
+  CongestionLevel,
   BoothInput,
   FacilityInput,
   NoticeInput,
@@ -90,6 +92,24 @@ export const api = {
     performances: content<PerformanceInput>('performances'),
     booths: content<BoothInput>('booths'),
     facilities: content<FacilityInput>('facilities'),
+    zones: (stageId: number) =>
+      request<{ serverTime: string; zones: ApiAdminZone[] }>(`/admin/stages/${stageId}/zones`),
+    createZone: (stageId: number, name: string, displayOrder: number) =>
+      request<ApiAdminZone>(`/admin/stages/${stageId}/zones`, {
+        method: 'POST',
+        body: { name, displayOrder },
+      }),
+    updateZone: (
+      zoneId: number,
+      patch: { name?: string; displayOrder?: number; active?: boolean },
+    ) => request<ApiAdminZone>(`/admin/zones/${zoneId}`, { method: 'PATCH', body: patch }),
+    deleteZone: (zoneId: number) => request<void>(`/admin/zones/${zoneId}`, { method: 'DELETE' }),
+    recordCongestion: (zoneId: number, level: CongestionLevel, estimatedPeople: number | null) =>
+      request<ApiAdminZone>(`/admin/zones/${zoneId}/congestion`, {
+        method: 'POST',
+        body: { level, estimatedPeople },
+      }),
+    congestionCsv: () => requestBlob('/admin/analytics/congestion.csv', 'text/csv'),
     issueQr: (boothId: string) =>
       request<{ boothCode: string; url: string }>(`/admin/booths/${boothId}/qr`, {
         method: 'POST',

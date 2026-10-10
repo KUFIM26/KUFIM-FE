@@ -10,6 +10,7 @@ import { WaitingPage, ScanPage, WaitingRegisterPage, QrEntryPage } from '../page
 import { NoticeFormPage, PerformanceFormPage, BoothFormPage } from '../pages/AdminForms'
 import { AdminWaitingListPage, AdminQueuePage, AdminSettingsPage } from '../pages/AdminWaitingPages'
 import AdminLoginPage from '../pages/AdminLoginPage'
+import AdminCongestionPage from '../pages/AdminCongestionPage'
 import { AdminGate } from '../app/AdminSessionProvider'
 import { ErrorPage, GuidePage, LoadingPage, NotFoundPage, PreviewPage } from '../pages/UtilityPages'
 
@@ -50,6 +51,7 @@ export const router = createBrowserRouter([
           { path: 'booths', element: <BoothsPage admin /> },
           { path: 'booths/new', element: <BoothFormPage key="new" /> },
           { path: 'booths/:id/edit', element: <BoothFormPage /> },
+          { path: 'congestion', element: <AdminCongestionPage /> },
           { path: 'waiting', element: <AdminWaitingListPage /> },
           { path: 'waiting/:boothId', element: <AdminQueuePage /> },
           { path: 'waiting/:boothId/settings', element: <AdminSettingsPage /> },

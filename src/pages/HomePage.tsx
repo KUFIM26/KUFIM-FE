@@ -6,6 +6,8 @@ import { Asset, EmptyState, SectionTitle } from '../components/ui'
 import { EmergencyBanner, FestivalMeta, ScheduleList, Stats } from '../components/festival'
 import { figmaAssets as assets } from '../data/figma-assets'
 import { isApiMode } from '../api/config'
+import { useServerNow } from '../api/congestion'
+import { StageCongestion } from '../components/congestion'
 import { kst } from '../api/mappers'
 import type { ApiFestival } from '../api/types'
 
@@ -19,7 +21,10 @@ function entryLabel(festival: ApiFestival) {
 
 export default function HomePage() {
   const [showNotice, setShowNotice] = useState(true)
-  const { performances, notices, festival, dayOptions, stageOptions } = useDemo()
+  const { performances, notices, festival, dayOptions, stageOptions, stages, clockOffset } =
+    useDemo()
+  const now = useServerNow(clockOffset)
+  const congestionStages = stages.filter((stage) => stage.zones?.length)
   const a = assets['17:303']
   const urgent = notices.find((n) => n.category === '긴급')
   const today = festival ? kst(festival.serverTime).date : undefined
@@ -89,6 +94,9 @@ export default function HomePage() {
             }
           />
         </section>
+        {congestionStages.map((stage) => (
+          <StageCongestion key={stage.stageId} name={stage.name} zones={stage.zones!} now={now} />
+        ))}
         <div className="grid grid-cols-4 gap-4 max-[360px]:gap-2">
           {shortcuts.map((link) => (
             <Link

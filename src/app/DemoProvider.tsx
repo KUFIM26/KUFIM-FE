@@ -6,10 +6,10 @@ import { DemoContext } from './demo-context'
 import type { LoadState, Settings, Ticket } from './demo-context'
 import type { Option } from '../components/ui'
 import { isApiMode } from '../api/config'
-import { useTopic } from '../api/realtime'
+import { pollEvery, useRealtimeConnected, useTopic } from '../api/realtime'
 import { api } from '../api/endpoints'
 import { ApiError } from '../api/client'
-import type { ApiFestival } from '../api/types'
+import type { ApiFestival, ApiStage, ApiZone } from '../api/types'
 import {
   toBooth,
   toDayOptions,
@@ -60,21 +60,41 @@ export function DemoProvider({ children }: { children: ReactNode }) {
   const [festival, setFestival] = useState<ApiFestival | null>(null)
   const [dayOptions, setDayOptions] = useState(mockDays)
   const [stageOptions, setStageOptions] = useState(mockStages)
+  const [stages, setStages] = useState<ApiStage[]>([])
+  // Server clock minus device clock, so the 15-minute congestion check ignores device time.
+  const [clockOffset, setClockOffset] = useState(0)
   const [attempt, setAttempt] = useState(0)
   const reload = useCallback(() => {
     setLoad({ status: 'loading' })
     setAttempt((n) => n + 1)
   }, [])
 
-  const applyCatalog = useCallback((catalog: Catalog) => {
-    const days = toDayOptions(catalog.festival, catalog.performances)
-    setFestival(catalog.festival)
-    setDayOptions(days)
-    setStageOptions(toStageOptions(catalog.stages))
-    setBooths([...catalog.booths.map(toBooth), ...catalog.facilities.map(toFacility)])
-    setPerformances(catalog.performances.map((p) => toPerformance(p, days)))
-    setNotices(catalog.notices.map(toNotice))
+  const applyStages = useCallback((items: ApiStage[]) => {
+    setStages(items)
+    const serverTime = items[0]?.serverTime
+    if (serverTime) setClockOffset(Date.parse(serverTime) - Date.now())
   }, [])
+  const refreshStages = useCallback(
+    () =>
+      api
+        .stages()
+        .then(applyStages)
+        .catch(() => undefined),
+    [applyStages],
+  )
+  const applyCatalog = useCallback(
+    (catalog: Catalog) => {
+      const days = toDayOptions(catalog.festival, catalog.performances)
+      setFestival(catalog.festival)
+      setDayOptions(days)
+      setStageOptions(toStageOptions(catalog.stages))
+      applyStages(catalog.stages)
+      setBooths([...catalog.booths.map(toBooth), ...catalog.facilities.map(toFacility)])
+      setPerformances(catalog.performances.map((p) => toPerformance(p, days)))
+      setNotices(catalog.notices.map(toNotice))
+    },
+    [applyStages],
+  )
   // Only notices change through /topic/notice; re-reading just them keeps the burst small
   // when every open page receives the same broadcast.
   const refreshNotices = useCallback(
@@ -86,6 +106,41 @@ export function DemoProvider({ children }: { children: ReactNode }) {
     [],
   )
   useTopic(isApiMode && load.status === 'ready' ? '/topic/notice' : null, refreshNotices)
+  // A congestion message carries the changed zone, so it is merged without any request.
+  // An unknown zone (just created) falls back to re-reading the stage list.
+  const live = useRealtimeConnected()
+  useTopic(isApiMode && load.status === 'ready' ? '/topic/congestion' : null, (body) => {
+    const zone = body as (ApiZone & { type?: string }) | null
+    if (!zone || typeof zone.zoneId !== 'number') return void refreshStages()
+    // Decided from the rendered state: a state updater runs later, so it cannot report back here.
+    const known = stages.some((stage) => stage.zones?.some((z) => z.zoneId === zone.zoneId))
+    if (!known) return void refreshStages()
+    setStages((items) =>
+      items.map((stage) => ({
+        ...stage,
+        zones: stage.zones?.map((z) => {
+          if (z.zoneId !== zone.zoneId) return z
+          return {
+            ...z,
+            level: zone.level,
+            estimatedPeople: zone.estimatedPeople,
+            updatedAt: zone.updatedAt,
+          }
+        }),
+      })),
+    )
+  })
+  // Catches up within 15s when the socket is down (STG-005), 60s as a safety net otherwise.
+  useEffect(() => {
+    if (!isApiMode || load.status !== 'ready') return
+    const timer = window.setInterval(
+      () => {
+        if (document.visibilityState === 'visible') void refreshStages()
+      },
+      pollEvery(live, 15000),
+    )
+    return () => window.clearInterval(timer)
+  }, [live, load.status, refreshStages])
   // Re-reads the catalog after an admin save without showing the full-page loader.
   const refresh = useCallback(() => fetchCatalog().then(applyCatalog), [applyCatalog])
 
@@ -131,6 +186,8 @@ export function DemoProvider({ children }: { children: ReactNode }) {
         festival,
         dayOptions,
         stageOptions,
+        stages,
+        clockOffset,
       }}
     >
       {children}
