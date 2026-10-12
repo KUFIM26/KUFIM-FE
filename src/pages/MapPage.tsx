@@ -1,13 +1,13 @@
 import { Link, useSearchParams } from 'react-router-dom'
-import { useDemo } from '../app/demo-context'
+import { useFestival } from '../app/festival-context'
 import { Page } from '../components/layout'
 import { Asset, Chips, EmptyState, Tabs } from '../components/ui'
 import { BoothRow, FacilityFilters, MapImage } from '../components/festival'
-import { boothCategories } from '../data/mock'
+import { boothCategories } from '../data/models'
 import { figmaAssets as assets } from '../data/figma-assets'
 
 export default function MapPage() {
-  const { booths } = useDemo()
+  const { booths, pins } = useFestival()
   const [params, setParams] = useSearchParams()
   const period = params.get('period') === 'night' ? 'night' : 'day'
   const category = params.get('category') || '전체'
@@ -58,7 +58,17 @@ export default function MapPage() {
         }}
       />
       <div className="relative min-h-[652px]" style={{ height: 'calc(100dvh - 246px)' }}>
-        <MapImage className="absolute inset-0" />
+        <MapImage
+          markers={items.flatMap((b) => {
+            const pin = pins.find(
+              (p) =>
+                p.targetId === b.apiId &&
+                p.targetType === (b.period === 'facility' ? 'FACILITY' : 'BOOTH'),
+            )
+            return pin ? [{ ...b, position: { x: pin.xPercent, y: pin.yPercent } }] : []
+          })}
+          className="w-full"
+        />
         {!list && (
           <button
             type="button"

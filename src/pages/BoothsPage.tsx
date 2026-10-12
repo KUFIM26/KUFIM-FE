@@ -1,13 +1,18 @@
+import { useCallback } from 'react'
+import { useBoothApi } from '../hooks/useBoothApi'
+import { useFacilityApi } from '../hooks/useFacilityApi'
+import { useResource } from '../hooks/useResource'
+import { RequestState } from '../components/RequestState'
+import { boothView, facilityView } from '../apis/adapters'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
-import { useDemo } from '../app/demo-context'
+import { useFestival } from '../app/festival-context'
 import { BottomActions, Page } from '../components/layout'
 import { BoothRow, FacilityFilters, MapImage, WaitingNumbers } from '../components/festival'
 import { Card, Chips, EmptyState, Tabs } from '../components/ui'
-import { boothCategories } from '../data/mock'
-import { NotFoundPage } from './UtilityPages'
+import { boothCategories } from '../data/models'
 
 export function BoothsPage({ admin = false }: { admin?: boolean }) {
-  const { booths } = useDemo()
+  const { booths } = useFestival()
   const [params, setParams] = useSearchParams()
   const period = ['night', 'facility'].includes(params.get('period') || '')
     ? params.get('period')!
@@ -67,9 +72,35 @@ export function BoothsPage({ admin = false }: { admin?: boolean }) {
 }
 export function BoothDetailPage() {
   const { id } = useParams()
-  const { booths } = useDemo()
-  const booth = booths.find((b) => b.id === id)
-  if (!booth) return <NotFoundPage />
+  const loader = useCallback(async () => {
+    if (id?.startsWith('facility-'))
+      return facilityView((await useFacilityApi.find(Number(id.slice(9)))).data.data)
+    const [b, status] = await Promise.all([
+      useBoothApi.find(Number(id)),
+      useBoothApi.status(Number(id)),
+    ])
+    return {
+      ...boothView(b.data.data),
+      ...(status.data.data.waitingEnabled
+        ? {
+            teams: status.data.data.waitingTeamCount,
+            minutes: status.data.data.estimatedWaitMinutes,
+          }
+        : {}),
+    }
+  }, [id])
+  const resource = useResource(loader)
+  const booth = resource.data
+  if (!booth)
+    return (
+      <Page title="부스 안내" back="/booths">
+        <RequestState
+          loading={resource.loading}
+          error={resource.error}
+          retry={() => void resource.refresh()}
+        />
+      </Page>
+    )
   return (
     <Page title={booth.period === 'facility' ? '시설 안내' : '부스 안내'} back="/booths">
       <div className="page-pad">
@@ -89,7 +120,7 @@ export function BoothDetailPage() {
         <Link to="/map" aria-label="축제 지도에서 위치 보기">
           <MapImage variant="mini" className="h-50 rounded-xl" />
         </Link>
-        {booth.period !== 'facility' && (
+        {booth.waitingEnabled && (
           <>
             <p className="text-center text-sm text-muted">
               부스에 직접 방문해 현장 QR을 스캔해주세요.

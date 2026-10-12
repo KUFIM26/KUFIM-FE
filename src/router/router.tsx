@@ -1,4 +1,5 @@
-import { createBrowserRouter, Outlet } from 'react-router-dom'
+import { AdminGuard, LoginPage } from '../pages/AuthPages'
+import { createBrowserRouter } from 'react-router-dom'
 import { RootLayout } from '../components/layout'
 import HomePage from '../pages/HomePage'
 import MenuPage from '../pages/MenuPage'
@@ -6,13 +7,13 @@ import MapPage from '../pages/MapPage'
 import { BoothsPage, BoothDetailPage } from '../pages/BoothsPage'
 import { PerformancesPage, PerformanceDetailPage } from '../pages/PerformancesPage'
 import { NoticesPage, NoticeDetailPage, NotificationsPage } from '../pages/NoticesPage'
-import { WaitingPage, ScanPage, WaitingRegisterPage } from '../pages/WaitingPages'
+import { WaitingPage, ScanPage, WaitingRegisterPage, QrEntryPage } from '../pages/WaitingPages'
 import { NoticeFormPage, PerformanceFormPage, BoothFormPage } from '../pages/AdminForms'
 import { AdminWaitingListPage, AdminQueuePage, AdminSettingsPage } from '../pages/AdminWaitingPages'
 import { ErrorPage, GuidePage, LoadingPage, NotFoundPage, PreviewPage } from '../pages/UtilityPages'
 
 // Browser history routes. Configure your static host to fall back to index.html.
-// Admin routes are UI previews; add authentication before connecting a backend.
+// Admin routes require the server session and role.
 export const router = createBrowserRouter([
   {
     element: <RootLayout />,
@@ -29,11 +30,13 @@ export const router = createBrowserRouter([
       { path: 'notices/:id', element: <NoticeDetailPage /> },
       { path: 'notifications', element: <NotificationsPage /> },
       { path: 'waiting', element: <WaitingPage /> },
+      { path: 'w/:boothCode', element: <QrEntryPage /> },
       { path: 'waiting/scan', element: <ScanPage /> },
       { path: 'waiting/register/:boothId', element: <WaitingRegisterPage /> },
+      { path: 'admin/login', element: <LoginPage /> },
       {
         path: 'admin',
-        element: <Outlet />,
+        element: <AdminGuard />,
         children: [
           { index: true, element: <MenuPage admin /> },
           { path: 'notices', element: <NoticesPage admin /> },

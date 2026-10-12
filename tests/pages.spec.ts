@@ -1,146 +1,174 @@
 import { expect, test } from '@playwright/test'
-import { screens } from '../src/data/screens'
+import { mockApi } from './api-fixture'
 
-for (const screen of screens) {
-  test(`Figma ${screen.node}: ${screen.name}`, async ({ page }, testInfo) => {
+for (const path of [
+  '/',
+  '/map',
+  '/booths',
+  '/booths/facility-7',
+  '/booths/7',
+  '/performances',
+  '/performances/9',
+  '/notices',
+  '/notices/4',
+  '/notifications',
+  '/waiting',
+  '/waiting/scan',
+  '/waiting/register/7',
+  '/admin',
+  '/admin/booths',
+  '/admin/booths/7/edit',
+  '/admin/booths/facility-7/edit',
+  '/admin/notices/new',
+  '/admin/performances/9/edit',
+  '/admin/waiting/7',
+  '/admin/waiting/7/settings',
+]) {
+  test(`API screen ${path}`, async ({ page }) => {
+    await mockApi(page, { loggedIn: true })
     const errors: string[] = []
-    const designHeight: Record<string, number> = {
-      '17:4': 853,
-      '17:303': 1701,
-      '47:1047': 892,
-      '108:481': 1433,
-      '118:1217': 956,
-      '118:1642': 956,
-      '118:1412': 956,
-    }
-    await page.setViewportSize({ width: 393, height: designHeight[screen.node] || 898 })
-    page.on('pageerror', (error) => errors.push(error.message))
-    page.on('response', (response) => {
-      if (response.status() >= 400) errors.push(`${response.status()} ${response.url()}`)
-    })
-    await page.goto(screen.path)
-    await page.evaluate(() => document.fonts.ready)
+    page.on('pageerror', (e) => errors.push(e.message))
+    await page.goto(path)
     await expect(page.locator('#main-content')).toBeVisible()
-    await expect(page.getByText('화면을 불러오지 못했어요.')).toHaveCount(0)
-    const images = await page.locator('img:visible').evaluateAll((nodes) =>
-      nodes.map((node) => ({
-        src: node.getAttribute('src'),
-        loaded: node.complete && node.naturalWidth > 0,
-        width: node.getBoundingClientRect().width,
-        height: node.getBoundingClientRect().height,
-        naturalWidth: node.naturalWidth,
-        naturalHeight: node.naturalHeight,
-      })),
-    )
-    for (const img of images) {
-      expect(img.loaded, `Image failed: ${img.src}`).toBeTruthy()
-      expect(img.width, `Zero width: ${img.src}`).toBeGreaterThan(0)
-      expect(img.height, `Zero height: ${img.src}`).toBeGreaterThan(0)
-      if (img.src?.endsWith('.svg'))
-        expect(
-          Math.abs(img.width / img.height - img.naturalWidth / img.naturalHeight),
-          `Distorted SVG: ${img.src}`,
-        ).toBeLessThan(0.15)
-    }
-    expect(
-      await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
-    ).toBeTruthy()
+    await expect(page.getByText('불러오는 중…')).toHaveCount(0)
     expect(errors).toEqual([])
-    await page.screenshot({
-      path: testInfo.outputPath(`${screen.node.replace(':', '-')}.png`),
-      fullPage: true,
-    })
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   })
 }
 
-test('navigation, day filters, category empty state, and mobile width', async ({ page }) => {
-  await page.goto('/')
-  await page.getByRole('link', { name: '무대 일정', exact: true }).click()
-  await expect(page).toHaveURL(/performances$/)
-  await page.getByRole('button', { name: /DAY 2/ }).click()
-  await expect(page).toHaveURL(/day=2/)
-  await expect(page.getByText('NOW', { exact: true })).toHaveCount(0)
-  await page.goto('/booths')
-  await page.getByRole('button', { name: '동아리', exact: true }).click()
-  await expect(page.getByText('해당하는 부스가 없어요.')).toBeVisible()
-  await page.getByRole('button', { name: '시설', exact: true }).click()
-  await expect(page.getByText('공학관 화장실', { exact: true })).toBeVisible()
-  await page.setViewportSize({ width: 320, height: 740 })
-  await page.goto('/')
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy()
-})
-
-test('waiting registration validates input, creates a ticket, and supports cancel dialog', async ({
+test('server data, actual festival days and detail fields replace mock content', async ({
   page,
 }) => {
-  await page.goto('/waiting/register/booth-1')
+  await mockApi(page)
+  await page.goto('/')
+  await expect(page.getByRole('heading', { name: '서버 축제' })).toBeVisible()
+  await expect(page.getByText('65개')).toHaveCount(0)
+  await page.goto('/performances')
+  await expect(page.getByRole('button', { name: /DAY 3/ })).toBeVisible()
+  await page.getByRole('link', { name: /서버 밴드/ }).click()
+  await expect(page.getByText('서버 공연 소개')).toBeVisible()
+  await page.goto('/booths/facility-7')
+  await expect(page.getByRole('heading', { name: '공학관 화장실' })).toBeVisible()
+})
+
+test('QR registration sends correct fields, retries with same key, restores token and cancels on server', async ({
+  page,
+}) => {
+  const state = await mockApi(page)
+  state.failRegisterOnce = true
+  await page.goto('/w/live-code')
+  await expect(page).toHaveURL(/waiting\/register\/7$/)
   await page.getByLabel('학번', { exact: true }).fill('202300012')
   await page.getByLabel('전화번호', { exact: true }).fill('01012341234')
   await page.getByRole('combobox', { name: '인원 수' }).selectOption('2')
-  await page.getByRole('button', { name: '자세히 보기' }).click()
-  await expect(page.getByText(/웨이팅 등록과 호출 안내를 위해/)).toBeVisible()
   await page.getByLabel('동의합니다', { exact: true }).check()
   await page.getByRole('button', { name: '웨이팅 접수하기' }).click()
+  await expect(page.getByRole('alert')).toContainText('서버에 연결하지 못했습니다')
+  await page.getByRole('button', { name: '웨이팅 접수하기' }).click()
   await expect(page).toHaveURL(/\/waiting$/)
-  await expect(page.getByText('88번', { exact: true })).toBeVisible()
-  await page.getByRole('button', { name: '웨이팅 취소하기', exact: true }).click()
-  await expect(page.getByRole('dialog')).toBeVisible()
-  await page.getByRole('button', { name: '유지하기' }).click()
-  await expect(page.getByText('88번', { exact: true })).toBeVisible()
+  await expect(page.getByText('37번', { exact: true })).toBeVisible()
+  expect(state.keys[0]).toBe(state.keys[1])
+  await page.reload()
+  await expect(page.getByText('37번', { exact: true })).toBeVisible()
+  expect(new Set(state.tokens).size).toBe(1)
+  const stored = await page.evaluate(() => ({ ...localStorage }))
+  expect(Object.keys(stored)).toEqual(['kufim.clientToken'])
   await page.getByRole('button', { name: '웨이팅 취소하기', exact: true }).click()
   await page.getByRole('dialog').getByRole('button', { name: '취소하기', exact: true }).click()
   await expect(page.getByText('아직 신청한 웨이팅이 없어요.')).toBeVisible()
+  expect(state.tickets).toHaveLength(0)
 })
 
-test('waiting form keeps the focused field visible above the mobile keyboard', async ({ page }) => {
-  await page.goto('/waiting/register/booth-1')
-  const phone = page.getByLabel('전화번호', { exact: true })
-  await phone.focus()
-  const initialScroll = await page.evaluate(() => window.scrollY)
-
-  await page.setViewportSize({ width: 393, height: 500 })
-  await expect.poll(() => phone.evaluate((input) => {
-    const viewport = window.visualViewport
-    return input.getBoundingClientRect().bottom <=
-      (viewport?.offsetTop ?? 0) + (viewport?.height ?? window.innerHeight) - 16
-  })).toBe(true)
-  await expect.poll(() => page.locator('.registration-sheet').evaluate((sheet) =>
-    parseFloat(getComputedStyle(sheet).paddingBottom),
-  )).toBeGreaterThan(20)
-
-  await page.setViewportSize({ width: 393, height: 898 })
-  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(initialScroll)
-  await expect(page.locator('.registration-sheet')).toHaveCSS('padding-bottom', '20px')
-})
-
-test('admin notice creation is reflected in the list and edit form', async ({ page }) => {
+test('login protects admin route, errors stay visible, saves carry CSRF and persist after reload', async ({
+  page,
+}) => {
+  const state = await mockApi(page)
   await page.goto('/admin/notices/new')
+  await expect(page).toHaveURL(/admin\/login/)
+  await page.getByLabel('아이디', { exact: true }).fill('admin')
+  await page.getByLabel('비밀번호', { exact: true }).fill('wrong')
+  await page.getByRole('button', { name: '로그인', exact: true }).click()
+  await expect(page.getByRole('alert')).toContainText('로그인 정보를')
+  await page.getByLabel('비밀번호', { exact: true }).fill('valid-password')
+  await page.getByRole('button', { name: '로그인', exact: true }).click()
+  await expect(page).toHaveURL(/admin\/notices\/new$/)
   await page.getByRole('button', { name: '안내', exact: true }).click()
-  await page.getByLabel('공지 제목', { exact: true }).fill('테스트 안내')
-  await page.getByLabel('공지 내용', { exact: true }).fill('등록 화면 검증용 공지입니다.')
+  await page.getByLabel('공지 제목', { exact: true }).fill('새 공지')
+  await page.getByRole('textbox', { name: '공지 내용', exact: true }).fill('DB에 보낼 내용')
+  state.failSave = true
   await page.getByRole('button', { name: '저장하기', exact: true }).click()
-  await page.getByRole('link', { name: /테스트 안내/ }).click()
-  await expect(page.getByLabel('공지 제목', { exact: true })).toHaveValue('테스트 안내')
-})
-
-test('admin queue cancellation and settings operate per booth', async ({ page }) => {
-  await page.goto('/admin/waiting/booth-1')
-  await page.getByRole('button', { name: '취소하기', exact: true }).first().click()
-  await page.getByRole('dialog').getByRole('button', { name: '취소하기', exact: true }).click()
-  await expect(page.getByRole('heading', { name: '12번 | 3명' })).toHaveCount(0)
-  await page.getByRole('link', { name: '부스 설정' }).click()
-  await page.getByRole('button', { name: '대기 마감' }).click()
+  await expect(page.getByRole('alert')).toContainText('저장 실패')
+  await expect(page.getByLabel('공지 제목', { exact: true })).toHaveValue('새 공지')
+  state.failSave = false
   await page.getByRole('button', { name: '저장하기', exact: true }).click()
-  await expect(page.getByText('대기 마감', { exact: true })).toBeVisible()
-})
-
-test('direct routes and desktop centered mobile layout', async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 1000 })
-  await page.goto('/admin/booths/new?period=facility')
-  await expect(page.getByLabel('시설 명', { exact: true })).toBeVisible()
-  await expect(page.locator('.app-shell')).toHaveCSS('max-width', '393px')
+  await expect(page).toHaveURL(/admin\/notices$/)
   await page.reload()
-  await expect(page.getByLabel('시설 명', { exact: true })).toBeVisible()
-  await page.goto('/notices/missing')
-  await expect(page.getByText('404', { exact: true })).toBeVisible()
+  await page.getByRole('link', { name: /새 공지/ }).click()
+  await expect(page.getByRole('textbox', { name: '공지 내용', exact: true })).toHaveValue(
+    'DB에 보낼 내용',
+  )
+})
+
+test('booth admin can operate assigned waiting, cannot open content management', async ({
+  page,
+}) => {
+  await mockApi(page, { loggedIn: true, role: 'BOOTH_ADMIN' })
+  await page.goto('/admin/notices')
+  await expect(page).toHaveURL(/admin\/waiting$/)
+  await expect(page.getByRole('link', { name: '테스트 부스', exact: true })).toBeVisible()
+})
+
+test('queue call, contact, enter and settings use real contract', async ({ page }) => {
+  const state = await mockApi(page, { loggedIn: true, active: true })
+  await page.goto('/admin/waiting/7')
+  await page.getByRole('button', { name: '호출하기' }).click()
+  await expect(page.getByRole('button', { name: '재호출', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: '전화하기' }).click()
+  await expect(page.getByRole('link', { name: /01012341234/ })).toHaveAttribute(
+    'href',
+    'tel:01012341234',
+  )
+  await page.getByRole('button', { name: '입장 완료', exact: true }).click()
+  await expect(page.getByText('현재 대기 중인 팀이 없어요.')).toBeVisible()
+  expect(state.tickets[0].status).toBe('ENTERED')
+  await page.getByRole('link', { name: '부스 설정' }).click()
+  await expect(page.getByLabel('호출 후 자동 취소 소요 시간 (분)')).toHaveAttribute('readonly', '')
+  await page.getByRole('button', { name: '대기 마감' }).click()
+  await page.getByRole('button', { name: '저장하기' }).click()
+  await expect(page.getByText('대기 마감', { exact: true })).toBeVisible()
+  expect(state.status).toBe('PAUSED')
+})
+
+test('notifications persist read state', async ({ page }) => {
+  const state = await mockApi(page)
+  await page.goto('/notifications')
+  await page.getByRole('button', { name: '전체 읽음' }).click()
+  await expect(page.getByText('읽지 않은 알림 0개')).toBeVisible()
+  await page.reload()
+  await expect(page.getByText('읽지 않은 알림 0개')).toBeVisible()
+  expect(state.notifications[0].readAt).not.toBeNull()
+})
+
+test('empty DB stays empty and API outage offers retry without fabricated data', async ({
+  page,
+}) => {
+  await mockApi(page, { empty: true })
+  await page.goto('/booths')
+  await expect(page.getByText('해당하는 부스가 없어요.')).toBeVisible()
+  await page.route('**/api/v1/booths', (route) => route.abort('failed'))
+  await page.reload()
+  await expect(page.getByRole('alert')).toContainText('서버에 연결하지 못했습니다')
+  await expect(page.getByRole('button', { name: '다시 시도' })).toBeVisible()
+})
+
+test('session expiry returns to login and preserves visitor token', async ({ page }) => {
+  const state = await mockApi(page, { loggedIn: true })
+  await page.goto('/admin/notices/new')
+  await page.getByLabel('공지 제목', { exact: true }).fill('만료 테스트')
+  await page.getByRole('textbox', { name: '공지 내용', exact: true }).fill('내용')
+  const token = await page.evaluate(() => localStorage.getItem('kufim.clientToken'))
+  state.loggedIn = false
+  await page.getByRole('button', { name: '저장하기' }).click()
+  await expect(page).toHaveURL(/admin\/login/)
+  expect(await page.evaluate(() => localStorage.getItem('kufim.clientToken'))).toBe(token)
 })

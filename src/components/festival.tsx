@@ -1,8 +1,11 @@
+import { useFestival } from '../app/festival-context'
+import { festivalDays, seoulDate } from '../apis/adapters'
+import type { Booth as MapBooth } from '../data/models'
 import { Link } from 'react-router-dom'
 import { Asset, Card, EmptyState, Tabs } from './ui'
 import { figmaAssets as assets } from '../data/figma-assets'
-import { facilities } from '../data/mock'
-import type { Booth, Performance, Notice } from '../data/mock'
+import { facilities } from '../data/models'
+import type { Booth, Performance, Notice } from '../data/models'
 
 export function EmergencyBanner({
   dismiss,
@@ -13,6 +16,7 @@ export function EmergencyBanner({
   notice?: Notice
   admin?: boolean
 }) {
+  if (!notice) return null
   const to = admin
     ? `/admin/notices/${notice?.id || 'urgent'}/edit`
     : `/notices/${notice?.id || 'urgent'}`
@@ -41,11 +45,15 @@ export function EmergencyBanner({
   )
 }
 export function FestivalMeta() {
+  const { festival } = useFestival()
+  if (!festival) return null
   return (
-    <div className="flex items-center gap-1.5 text-[8px] font-bold text-white">
-      <span className="rounded-xl bg-white/50 px-1.5 py-px">DAY 1</span>
-      <span>2026.09.30.</span>
-      <span>건국대학교 서울캠퍼스</span>
+    <div className="flex flex-wrap gap-1.5 text-[10px] font-bold">
+      <span>{festival.name}</span>
+      <span>
+        {seoulDate(festival.startAt)} ~ {seoulDate(festival.endAt)}
+      </span>
+      <span>{festival.location}</span>
     </div>
   )
 }
@@ -105,24 +113,26 @@ export function PerformanceFilters({
   onDay: (value: string) => void
   onStage: (value: string) => void
 }) {
+  const { festival, stages, performances } = useFestival()
+  const days = [...new Set([...festivalDays(festival), ...performances.map((p) => p.day)])].sort()
   return (
     <div className="flex flex-col gap-3 px-5 pt-3">
-      <Tabs
-        value={day}
-        onChange={onDay}
-        options={[
-          { value: '1', label: 'DAY 1', sublabel: '9월 30일 (수)' },
-          { value: '2', label: 'DAY 2', sublabel: '10월 01일 (목)' },
-        ]}
-      />
+      <div className="overflow-x-auto">
+        <Tabs
+          value={day}
+          onChange={onDay}
+          options={days.map((date, index) => ({
+            value: date,
+            label: `DAY ${index + 1}`,
+            sublabel: date.slice(5).replace('-', '/'),
+          }))}
+        />
+      </div>
       <Tabs
         underline
         value={stage}
         onChange={onStage}
-        options={[
-          { value: 'main', label: '메인 무대' },
-          { value: 'sub', label: '서브 무대' },
-        ]}
+        options={stages.map((s) => ({ value: String(s.stageId), label: s.name }))}
       />
     </div>
   )
@@ -222,19 +232,41 @@ export function FacilityFilters({
 export function MapImage({
   className = '',
   variant = 'map',
+  markers = [],
 }: {
   className?: string
   variant?: 'map' | 'mini' | 'picker'
+  markers?: MapBooth[]
 }) {
+  const { floorplan } = useFestival()
+  if (!floorplan)
+    return (
+      <div
+        className={`flex items-center justify-center bg-[#e8eee9] p-5 text-sm text-muted ${className}`}
+      >
+        등록된 지도가 없습니다.
+      </div>
+    )
   return (
     <div
-      className={`map-crop ${variant === 'mini' ? 'map-mini' : variant === 'picker' ? 'map-picker' : ''} ${className}`}
+      className={`relative overflow-hidden ${className}`}
+      data-map-variant={variant}
+      style={{ aspectRatio: `${floorplan.width}/${floorplan.height}`, height: 'auto' }}
     >
-      <img
-        src={assets['53:1227'].imgBasemapImage}
-        alt="건국대학교 서울캠퍼스와 일감호 일대 축제 지도"
-        draggable={false}
-      />
+      <img src={floorplan.imageUrl} alt="축제 지도" draggable={false} className="h-full w-full" />
+      {markers
+        .filter((b) => b.position)
+        .map((b) => (
+          <Link
+            key={b.id}
+            to={`/booths/${b.id}`}
+            aria-label={`${b.name} 위치`}
+            className="absolute -translate-x-1/2 -translate-y-full rounded bg-brand px-2 py-1 text-[10px] font-bold text-white shadow"
+            style={{ left: `${b.position!.x}%`, top: `${b.position!.y}%` }}
+          >
+            {b.name}
+          </Link>
+        ))}
     </div>
   )
 }

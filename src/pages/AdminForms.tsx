@@ -1,12 +1,26 @@
+import { useNoticeApi } from '../hooks/useNoticeApi'
+import { usePerformanceApi } from '../hooks/usePerformanceApi'
+import { useBoothApi } from '../hooks/useBoothApi'
+import { useFacilityApi } from '../hooks/useFacilityApi'
+import { useAction } from '../hooks/useResource'
+import { RequestState } from '../components/RequestState'
+import {
+  codeFor,
+  noticeLabels,
+  performanceLabels,
+  organizerLabels,
+  facilityLabels,
+  festivalDays,
+} from '../apis/adapters'
 import { useEffect, useRef, useState } from 'react'
 import type { FormEvent, ReactNode } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { useDemo } from '../app/demo-context'
+import { useFestival } from '../app/festival-context'
 import { BottomActions, Page } from '../components/layout'
 import { Asset, Button, Chips, SectionTitle, Tabs } from '../components/ui'
 import { FacilityFilters, MapImage, PerformanceFilters } from '../components/festival'
-import { boothCategories } from '../data/mock'
-import type { Booth, Notice, Performance } from '../data/mock'
+import { boothCategories } from '../data/models'
+import type { Booth } from '../data/models'
 import { figmaAssets as assets } from '../data/figma-assets'
 import { NotFoundPage } from './UtilityPages'
 
@@ -18,10 +32,23 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
     </label>
   )
 }
-function SaveBar({ form, cancel }: { form: string; cancel: () => void }) {
+function SaveBar({
+  form,
+  cancel,
+  pending,
+}: {
+  form: string
+  cancel: () => void
+  pending: boolean
+}) {
   return (
     <BottomActions>
-      <Button type="submit" form={form} className="!bg-[#1d8a45] !bg-none !text-base">
+      <Button
+        type="submit"
+        form={form}
+        disabled={pending}
+        className="!bg-[#1d8a45] !bg-none !text-base"
+      >
         저장하기
       </Button>
       <Button tone="gray" className="!bg-[#cfcfcf] !text-base" onClick={cancel}>
@@ -64,7 +91,8 @@ function TimeSelect({ name, initial }: { name: string; initial?: string }) {
 
 export function NoticeFormPage() {
   const { id } = useParams()
-  const { notices, setNotices } = useDemo()
+  const { notices, refresh } = useFestival()
+  const action = useAction()
   const item = notices.find((n) => n.id === id)
   const [category, setCategory] = useState(item?.category || '긴급')
   const navigate = useNavigate()
@@ -72,18 +100,17 @@ export function NoticeFormPage() {
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const data = new FormData(event.currentTarget)
-    const next: Notice = {
-      id: item?.id || `notice-${Date.now()}`,
-      title: value(data, 'title'),
-      body: value(data, 'body'),
-      category,
-      date: item?.date || '09.30. 18:32',
-      unread: true,
-    }
-    setNotices((items) =>
-      item ? items.map((n) => (n.id === item.id ? next : n)) : [next, ...items],
-    )
-    navigate('/admin/notices')
+    void action.run(async () => {
+      const input = {
+        title: value(data, 'title'),
+        content: value(data, 'body'),
+        category: codeFor(noticeLabels, category),
+      }
+      if (item) await useNoticeApi.update(Number(item.id), input)
+      else await useNoticeApi.make(input)
+      await refresh()
+      navigate('/admin/notices')
+    })
   }
   return (
     <Page title={item ? '공지사항 수정' : '공지사항 등록'} back="/admin/notices" className="pb-28">
@@ -116,17 +143,25 @@ export function NoticeFormPage() {
           />
         </Field>
       </form>
-      <SaveBar form="notice-form" cancel={() => navigate('/admin/notices')} />
+      <RequestState error={action.error} />
+      <SaveBar
+        pending={action.pending}
+        form="notice-form"
+        cancel={() => navigate('/admin/notices')}
+      />
     </Page>
   )
 }
 export function PerformanceFormPage() {
   const { id } = useParams()
-  const { performances, setPerformances } = useDemo()
+  const { performances, festival, stages, refresh } = useFestival()
+  const action = useAction()
   const item = performances.find((p) => p.id === id)
   const [params] = useSearchParams()
-  const [day, setDay] = useState(item?.day || params.get('day') || '1')
-  const [stage, setStage] = useState(item?.stage || params.get('stage') || 'main')
+  const [day, setDay] = useState(item?.day || params.get('day') || festivalDays(festival)[0] || '')
+  const [stage, setStage] = useState(
+    item?.stage || params.get('stage') || String(stages[0]?.stageId || ''),
+  )
   const [kind, setKind] = useState(item?.kind || '밴드')
   const [timeError, setTimeError] = useState('')
   const navigate = useNavigate()
@@ -138,24 +173,25 @@ export function PerformanceFormPage() {
       setTimeError('종료 시간을 시작 시간 이후로 선택해주세요.')
       return
     }
-    const next: Performance = {
-      id: item?.id || `performance-${Date.now()}`,
-      name: value(data, 'name'),
-      description: value(data, 'description'),
-      additionalDescription: value(data, 'additionalDescription'),
-      cast: value(data, 'cast'),
-      setlist: value(data, 'setlist'),
-      day,
-      stage,
-      kind,
-      time: value(data, 'time'),
-      end: value(data, 'end'),
-      place: stage === 'main' ? '노천극장' : '황소상 서브무대',
-    }
-    setPerformances((items) =>
-      item ? items.map((p) => (p.id === item.id ? next : p)) : [...items, next],
-    )
-    navigate(`/admin/performances?day=${day}&stage=${stage}`)
+    void action.run(async () => {
+      if (!festival || !stage || !day) throw new Error('축제와 무대가 먼저 등록되어야 합니다.')
+      const input = {
+        ...(item ? {} : { festivalId: festival.festivalId }),
+        stageId: Number(stage),
+        title: value(data, 'name'),
+        type: codeFor(performanceLabels, kind),
+        description: value(data, 'description'),
+        additionalDescription: value(data, 'additionalDescription'),
+        castMembers: value(data, 'cast'),
+        setlist: value(data, 'setlist'),
+        startAt: `${day}T${value(data, 'time')}:00+09:00`,
+        endAt: `${day}T${value(data, 'end')}:00+09:00`,
+      }
+      if (item) await usePerformanceApi.update(item.apiId, input)
+      else await usePerformanceApi.make(input)
+      await refresh()
+      navigate(`/admin/performances?day=${day}&stage=${stage}`)
+    })
   }
   return (
     <Page
@@ -233,7 +269,12 @@ export function PerformanceFormPage() {
           />
         </Field>
       </form>
-      <SaveBar form="performance-form" cancel={() => navigate('/admin/performances')} />
+      <RequestState error={action.error} />
+      <SaveBar
+        pending={action.pending}
+        form="performance-form"
+        cancel={() => navigate('/admin/performances')}
+      />
     </Page>
   )
 }
@@ -316,7 +357,8 @@ function LocationPicker({
 }
 export function BoothFormPage() {
   const { id } = useParams()
-  const { booths, setBooths } = useDemo()
+  const { booths, festival, floorplan, refresh } = useFestival()
+  const action = useAction()
   const item = booths.find((b) => b.id === id)
   const [params, setParams] = useSearchParams()
   const initial = item?.period || params.get('period') || 'day'
@@ -342,21 +384,35 @@ export function BoothFormPage() {
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const data = new FormData(event.currentTarget)
-    const next: Booth = {
-      id: item?.id || `booth-${Date.now()}`,
-      name: value(data, 'name'),
-      description: value(data, 'description'),
-      place: value(data, 'place'),
-      period,
-      category,
-      hours: facility ? '24시간' : period === 'day' ? '09:00~17:00' : '18:00~25:00',
-      ...(position ? { position } : {}),
-      ...(facility ? {} : { teams: item?.teams ?? 0, minutes: item?.minutes ?? 0 }),
-    }
-    setBooths((items) =>
-      item ? items.map((b) => (b.id === item.id ? next : b)) : [...items, next],
-    )
-    navigate(`/admin/booths?period=${period}`)
+    void action.run(async () => {
+      if (!festival) throw new Error('축제가 먼저 등록되어야 합니다.')
+      if (item && (item.period === 'facility') !== facility)
+        throw new Error('부스와 시설 간 유형 변경은 지원하지 않습니다.')
+      const common = {
+        ...(item ? {} : { festivalId: festival.festivalId }),
+        name: value(data, 'name'),
+        description: value(data, 'description'),
+        place: value(data, 'place'),
+        operatingHours: value(data, 'hours'),
+        pin: position ? { xPercent: position.x, yPercent: position.y } : null,
+      }
+      if (facility) {
+        const input = { ...common, type: codeFor(facilityLabels, category) }
+        if (item) await useFacilityApi.update(item.apiId, input)
+        else await useFacilityApi.make(input)
+      } else {
+        const input = {
+          ...common,
+          period: period === 'night' ? ('NIGHT' as const) : ('DAY' as const),
+          organizerType: codeFor(organizerLabels, category),
+          waitingEnabled: data.get('waitingEnabled') === 'on',
+        }
+        if (item) await useBoothApi.update(item.apiId, input)
+        else await useBoothApi.make(input)
+      }
+      await refresh()
+      navigate(`/admin/booths?period=${period}`)
+    })
   }
   return (
     <Page
@@ -368,6 +424,7 @@ export function BoothFormPage() {
         <Tabs
           value={period}
           onChange={(v) => {
+            if (item && (item.period === 'facility') !== (v === 'facility')) return
             setPeriod(v as Booth['period'])
             setCategory(v === 'facility' ? '상황실' : '총학생회')
           }}
@@ -407,6 +464,24 @@ export function BoothFormPage() {
             placeholder="운영 장소를 입력하세요."
           />
         </Field>
+        <Field label="운영 시간">
+          <input
+            name="hours"
+            className="form-control"
+            defaultValue={item?.hours || ''}
+            placeholder="예: 09:00~17:00"
+          />
+        </Field>
+        {!facility && (
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              name="waitingEnabled"
+              defaultChecked={item?.waitingEnabled ?? false}
+            />
+            웨이팅 접수 사용
+          </label>
+        )}
         <Field label={facility ? '시설 소개' : '부스 소개'}>
           <textarea
             className="form-control min-h-[132px] resize-y"
@@ -417,9 +492,13 @@ export function BoothFormPage() {
         </Field>
         <section className="form-field">
           <SectionTitle>{facility ? '시설' : '부스'} 위치 지정(지도를 클릭하여 수정)</SectionTitle>
+          {!floorplan && (
+            <p className="text-xs text-muted">도면 등록 후 위치를 지정할 수 있습니다.</p>
+          )}
           <button
             type="button"
             className="relative overflow-hidden rounded-xl"
+            disabled={!floorplan}
             aria-label="지도에서 위치 지정"
             onClick={() =>
               setParams(
@@ -440,7 +519,12 @@ export function BoothFormPage() {
           </button>
         </section>
       </form>
-      <SaveBar form="booth-form" cancel={() => navigate('/admin/booths')} />
+      <RequestState error={action.error} />
+      <SaveBar
+        pending={action.pending}
+        form="booth-form"
+        cancel={() => navigate('/admin/booths')}
+      />
       <LocationPicker
         open={params.get('location') === 'pick'}
         onClose={closePicker}

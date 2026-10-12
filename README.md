@@ -1,92 +1,101 @@
-# KUFIM
+# KUFIM FE
 
-2026 건국대학교 가을대동제 ‘일감연’ 모바일 웹 UI입니다. 제공된 Figma의 31개 프레임을 React 페이지와 탭·모달·바텀시트 상태로 구성했습니다.
+건국대학교 축제 안내·부스 웨이팅 모바일 웹입니다. React 19, TypeScript, Vite 8, Tailwind CSS 4, React Router 7, Axios를 사용하며 `KUFIM-BE`의 `/api/v1` API에 연결됩니다. 화면 데이터와 저장 작업에 데모 데이터는 사용하지 않습니다.
 
-## 시작하기
+## 실행
 
-Node.js 22.12 이상(또는 Vite에서 지원하는 Node.js 버전)이 필요합니다. 현재 작업 환경은 Node.js 22.13입니다.
+FE 폴더에서 Node.js 22.12 이상으로 실행합니다.
 
 ```sh
-cd /Users/kimdohyeon/Desktop/KUFIM
 npm install
+cp .env.example .env.local
 npm run dev
 ```
 
-프로젝트는 아래 명령으로 생성했습니다.
+별도 터미널에서 BE를 실행합니다. 처음 관리자 계정을 만들 때만 원하는 개발용 계정을 환경변수로 지정합니다.
 
 ```sh
-npm create vite@latest . -- --template react-ts --no-interactive
+cd ../KUFIM-BE
+export KUFIM_ADMIN_LOGIN=admin
+export KUFIM_ADMIN_PASSWORD='직접-정한-개발용-비밀번호'
+./gradlew bootRun
 ```
 
-- 사용자 홈: http://localhost:5173/
-- 관리자 메뉴: http://localhost:5173/admin
-- 전체 화면/상태 미리보기: http://localhost:5173/preview
+- 사용자: http://localhost:5173/
+- 관리자 로그인: http://localhost:5173/admin/login
+- BE Swagger: http://localhost:8080/swagger-ui.html
 
-React 19, TypeScript, Vite 8, Tailwind CSS 4의 Vite 플러그인, React Router 7을 사용합니다. Pretendard와 Figma 아이콘·지도는 로컬 파일로 제공하므로 임시 Figma URL에 의존하지 않습니다.
+새 DB에는 콘텐츠가 없습니다. Swagger에서 관리자 로그인 후 축제 → 지도 도면(위치 지정 시 필요) → 무대를 먼저 등록하세요. 이후 FE 관리자 화면에서 공지, 공연, 부스, 시설을 등록할 수 있습니다. 부스 등록 시 **웨이팅 접수 사용**을 켜면 웨이팅 운영 목록에 표시됩니다. 기존 관리자 계정의 비밀번호는 환경변수로 덮어쓰지 않습니다.
 
-## 폴더 구성
+## 요청한 폴더 구조
 
 ```text
 src/
+  apis/
+    axios.ts                # baseURL, 쿠키·CSRF·방문자 토큰, 오류 처리
+    type.ts                 # BE 요청·응답 타입
+    adapters.ts             # BE 필드·enum ↔ 화면 표시 데이터
+  hooks/
+    useAuthApi.ts
+    useFestivalApi.ts
+    useBoothApi.ts
+    useFacilityApi.ts
+    usePerformanceApi.ts
+    useNoticeApi.ts
+    useWaitingApi.ts
+    useNotificationApi.ts
+    useResource.ts          # 비동기 조회·재조회·폴링, 중복 클릭 방지
   app/
-    router.tsx          # 사용자·관리자 경로
-    DemoProvider.tsx    # 데모 데이터 상태
-    demo-context.ts     # 타입과 상태 접근 훅
-  components/
-    layout.tsx         # 모바일 레이아웃, 헤더, 하단 내비게이션
-    ui.tsx             # 버튼, 탭, 필터, 다이얼로그
-    festival.tsx       # 공연, 부스, 지도, 축제 카드
-  data/
-    mock.ts            # 백엔드 연결 전 예시 데이터
-    screens.ts         # Figma 31개 프레임 ↔ URL 매핑
-    figma-assets.ts    # 원본 에셋 경로
-  pages/               # 영역별 페이지
-  index.css            # Tailwind, 디자인 토큰, 공통 스타일
-public/assets/figma/    # 원본 Figma SVG·지도 이미지
-tests/                 # 화면·에셋·주요 이동 흐름 검증
+    AuthProvider.tsx        # 서버 관리자 세션 상태
+    FestivalProvider.tsx    # API에서 불러온 공통 콘텐츠
+  data/models.ts            # 화면용 타입과 표시 분류
+  pages/                    # 사용자·관리자 화면
+  components/               # 공통 UI
+  router/router.tsx
 ```
 
-## 라우팅
+`use...Api`는 요청하신 형태의 **API 메서드 객체**입니다. React 상태 훅 자체는 아니므로 이벤트 핸들러나 비동기 함수에서도 호출할 수 있습니다. Axios 응답을 그대로 반환하며 BE 응답 본문은 `{ success, data, error }`입니다.
 
-| 영역                           | 경로                                                                             |
-| ------------------------------ | -------------------------------------------------------------------------------- |
-| 홈, 전체 메뉴                  | `/`, `/menu`                                                                     |
-| 축제 지도, 지도 목록           | `/map`, `/map?view=list`                                                         |
-| 부스·시설 목록                 | `/booths`, `/booths?period=facility`                                             |
-| 부스 상세                      | `/booths/:id`                                                                    |
-| 공연 일정·상세                 | `/performances`, `/performances/:id`                                             |
-| 공지 목록·상세                 | `/notices`, `/notices/:id`                                                       |
-| 알림함                         | `/notifications`                                                                 |
-| 내 대기표                      | `/waiting`                                                                       |
-| 대기표 활성·취소 확인 미리보기 | `/waiting?state=active`, `/waiting?state=cancel`                                 |
-| QR 안내·접수                   | `/waiting/scan`, `/waiting/register/:boothId`                                    |
-| 관리자 홈                      | `/admin`                                                                         |
-| 공지 관리·등록·수정            | `/admin/notices`, `/admin/notices/new`, `/admin/notices/:id/edit`                |
-| 공연 관리·등록·수정            | `/admin/performances`, `/admin/performances/new`, `/admin/performances/:id/edit` |
-| 부스 관리·등록·수정            | `/admin/booths`, `/admin/booths/new`, `/admin/booths/:id/edit`                   |
-| 시설 등록·위치 지정            | `/admin/booths/new?period=facility`, `/admin/booths/new?location=pick`           |
-| 웨이팅 운영                    | `/admin/waiting`, `/admin/waiting/:boothId`                                      |
-| 부스 설정                      | `/admin/waiting/:boothId/settings`                                               |
-| 관리자 취소 확인 미리보기      | `/admin/waiting/booth-1?dialog=cancel`                                           |
-| 보조 안내                      | `/guide`, `/report`                                                              |
-| 화면 목록·로딩                 | `/preview`, `/loading`                                                           |
+```ts
+import { useBoothApi } from '../hooks/useBoothApi'
+import { useNoticeApi } from '../hooks/useNoticeApi'
 
-날짜·무대·부스 유형·카테고리는 검색 조건으로 관리합니다. 상세 페이지는 데이터 ID를 사용합니다. 공통 레이아웃 아래에 `/admin` 경로를 별도로 묶었습니다. 데스크톱에서는 모바일 화면을 393px 너비로 중앙 배치하고 작은 모바일 화면에서는 너비를 줄입니다.
+const response = await useBoothApi.findAll()
+const booths = response.data.data
 
-## 이번 구현 범위
+await useNoticeApi.make({
+  title: '행사 안내',
+  content: '축제 운영 안내입니다.',
+  category: 'INFO',
+})
+```
 
-- Figma의 사용자·관리자 화면, 원본 SVG와 지도 이미지 적용
-- 하단 메뉴, 상세 이동, 날짜/무대/카테고리 필터, 빈 상태
-- QR 안내 → 접수 폼 → 대기표 → 취소 확인 흐름
-- 관리자 공지·공연·부스의 등록 및 수정, 지도 위치 선택
-- 부스 대기 명단, 호출 표시, 취소, 운영 상태와 시간 설정
-- 다이얼로그 키보드 이동·Escape 닫기, 입력값 기본 검증
+예시의 Dept API나 외부 서비스 주소는 추가하지 않았습니다. KUFIM의 실제 API 경로·인증 방식을 사용합니다.
 
-모든 데이터 변경은 현재 브라우저 탭의 메모리에만 적용되며 새로고침하면 초기화됩니다. 학번·전화번호는 서버 전송이나 저장을 하지 않습니다. 실제 QR 카메라 인식, 문자·전화·푸시, 실시간 대기열, 지도 API, 관리자 인증은 연결하지 않았습니다. QR 스캔 화면의 미리보기 링크로 접수 화면에 진입할 수 있습니다. 부스 설정에 보이는 QR은 Figma의 원본 예시 이미지이며 운영용 QR 발급 기능이 아닙니다.
+## 주소와 인증
 
-관리자 경로는 인증 없는 UI 미리보기입니다. 백엔드 연결 시 인증과 서버 권한 검사를 함께 적용해야 합니다.
+`.env.local`의 `VITE_API_BASE_URL`이 Axios 기본 주소입니다. 기본값은 `/api/v1`이며 Vite가 `/api` 요청을 `API_PROXY_TARGET`(기본 `http://127.0.0.1:8080`)으로 전달합니다. 환경변수를 바꾼 뒤에는 Vite를 재시작하세요.
 
-Figma에 상세 화면이 없는 부스 상세·긴급 신고·이용 안내는 기존 카드 스타일을 사용하는 보조 화면입니다. 임시 문구 일부는 예시 문구로 정리했습니다. 공연 등록 디자인에 두 번 등장하는 ‘공연 소개’ 입력은 두 항목으로 유지했습니다. 행사 안내는 3일이지만 공연 탭은 원본처럼 DAY 1·DAY 2만 제공합니다.
+- 관리자: `KUFIMSESSION` HttpOnly 쿠키와 `XSRF-TOKEN` → `X-XSRF-TOKEN` 헤더. Bearer accessToken은 사용하지 않습니다.
+- 방문자: UUID v4를 `localStorage['kufim.clientToken']`에 유지하고 `X-Client-Token` 헤더로 보냅니다. 학번·전화번호는 localStorage에 저장하지 않습니다.
+- 관리자 세션 만료 시 로그인 화면으로 이동합니다. 방문자 토큰은 유지하며 로그인 실패는 입력 화면에서 안내합니다.
+- `SUPER_ADMIN`은 콘텐츠·웨이팅 화면, `BOOTH_ADMIN`은 배정된 부스의 운영 화면에 접근합니다. 최종 권한 검사는 BE가 수행합니다.
+
+[Axios 공식 설정 문서](https://axios-http.com/docs/req_config)의 쿠키·XSRF 설정을 사용합니다.
+
+## 연결 범위
+
+- 축제 요약, 실제 날짜·무대 필터, 부스·시설·공연·공지 목록과 상세
+- 관리자 공지·공연·부스·시설 등록·수정과 저장 실패 표시
+- BE 도면 이미지·부스/시설 위치 표시 및 관리자 위치 저장
+- `/w/:boothCode` QR 진입 → 접수 → 내 대기표 복원·취소
+- 관리자 호출·재호출·입장·노쇼·취소, 마스킹된 명단, 권한 있는 연락처 조회
+- 부스 운영 상태·팀당 예상 시간 저장, 서버가 생성한 QR PNG 다운로드
+- 알림 목록·개별 읽음·전체 읽음·페이지 이동
+
+웨이팅과 관리자 대기열은 5초, 알림함은 10초 간격으로 활성 탭에서 다시 조회합니다. WebSocket 연결은 이번 구현에 포함하지 않았습니다. 재시도 키는 접수 요청 및 호출 요청이 실패했을 때 같은 작업의 재시도에 재사용됩니다. 관리자 자동 취소 시간은 BE 정책에 따라 최초 호출 후 **10분 고정**으로 표시됩니다.
+
+휴대폰 기본 카메라로 현장 QR을 스캔합니다. 웹 내부 카메라 인식은 구현하지 않았습니다. 문자 발송은 BE 공급자 연결 전까지 `NOT_CONFIGURED`이며 화면에서 이를 안내합니다. 축제·무대·첫 지도 도면·관리자 계정 관리는 기존 BE API/Swagger를 사용합니다.
 
 ## 검증
 
@@ -96,21 +105,21 @@ npm run lint
 npm test
 ```
 
-테스트를 처음 실행하는 환경에서는 `npx playwright install chromium`으로 브라우저를 설치하세요. 화면별 직접 접속, 이미지 로드·SVG 비율·가로 넘침, 웨이팅 접수와 취소, 관리자 저장 흐름을 검증합니다.
+`npm test`는 브라우저의 API 응답을 테스트 fixture로 제어해 요청 payload·토큰·CSRF·저장·오류·새로고침 복원 등을 검증합니다. 프로덕션 코드에서는 fixture를 가져오지 않습니다. 브라우저가 없으면 `npx playwright install chromium`을 실행하세요.
 
-## 빌드와 배포
+실제 BE와 연결하는 검증:
 
 ```sh
-npm run build
-npm run preview
+# BE 폴더에서 먼저 실행
+./gradlew test bootJar
+# FE 폴더에서 실행
+npm run test:integration
 ```
 
-배포 산출물은 `dist/`입니다. BrowserRouter를 사용하므로 정적 호스팅에서 존재하지 않는 파일 경로를 `/index.html`로 돌려주는 SPA fallback 설정이 필요합니다. 사이트 루트(`/`)에 배포하는 기본 구성입니다.
+통합 테스트는 Java 실행 환경이 필요합니다. 전용 BE 포트 18080, FE 포트 4174, 메모리 H2 DB와 일회용 테스트 관리자를 사용하며 기존 로컬 DB를 변경하지 않습니다. 테스트가 끝나면 서버를 종료합니다. 로그인, 실제 저장, QR PNG, QR 접수, 복원, 호출·알림·입장을 검증합니다.
 
-Vercel에서는 프로젝트 루트의 `vercel.json`이 `/admin` 등의 직접 접속과 새로고침을 처리합니다. Framework Preset은 `Vite`, Build Command는 `npm run build`, Output Directory는 `dist`를 사용하세요. 설정 파일을 추가하거나 수정한 경우 변경 내용을 포함한 새 배포가 필요합니다. Git 연동 배포라면 배포 대상 브랜치에 커밋하고 푸시하세요. 기존 커밋을 다시 배포하는 것만으로는 로컬의 변경 사항이 반영되지 않습니다.
+## 배포
 
-`public/_redirects`는 이 파일을 지원하는 다른 호스트용 설정이며 Vercel 설정을 대신하지 않습니다. 참고: [Vercel의 Vite SPA 배포 안내](https://vercel.com/docs/frameworks/frontend/vite#using-vite-to-make-spas).
+`npm run build` 결과는 `dist/`입니다. 운영 환경도 **FE와 같은 origin의 `/api` reverse proxy**를 권장합니다. 현재 `vercel.json`은 SPA fallback만 설정하므로 배포 전에 실제 BE 주소로 `/api/:path*` 전달 규칙을 SPA fallback보다 앞에 추가해야 합니다. 운영 BE 주소가 정해지지 않아 임의의 외부 주소를 넣지는 않았습니다.
 
-설정 참고: [Vite](https://vite.dev/guide/), [Tailwind Vite 설치](https://tailwindcss.com/docs/installation/using-vite), [React Router](https://reactrouter.com/start/declarative/installation)
-
-디자인 원본: [KUFIM Figma](https://www.figma.com/design/0VwxRD0ybkDQjNagQF1Muw/KUFIM?node-id=0-1)
+별도 origin의 절대 API 주소를 사용할 경우 BE CORS·세션 쿠키·CSRF 쿠키 접근 구성을 함께 맞춰야 합니다. API 호스트 전용 쿠키를 FE가 읽을 수 없는 배포에서는 `withCredentials`만 설정해도 CSRF 헤더가 생기지는 않습니다. 기본 same-origin proxy 구성을 사용하면 이를 피할 수 있습니다. 운영 QR의 `FRONTEND_BASE_URL`도 실제 FE 주소로 설정하세요.

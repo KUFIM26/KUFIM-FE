@@ -1,165 +1,195 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { useDemo } from '../app/demo-context'
+import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
+import axios from 'axios'
 import { Page } from '../components/layout'
-import { Asset, Button, Card, ConfirmDialog, SectionTitle } from '../components/ui'
+import { Asset, Button, Card, ConfirmDialog, EmptyState, SectionTitle } from '../components/ui'
 import { BoothRow, WaitingNumbers } from '../components/festival'
+import { RequestState } from '../components/RequestState'
 import { figmaAssets as assets } from '../data/figma-assets'
-import { NotFoundPage } from './UtilityPages'
+import { useBoothApi } from '../hooks/useBoothApi'
+import { useWaitingApi } from '../hooks/useWaitingApi'
+import { useAction, useResource } from '../hooks/useResource'
+import { boothView, dateText, waitingLabels } from '../apis/adapters'
+import type { Booth } from '../data/models'
+import type { WaitingTicket } from '../apis/type'
 
 export function WaitingInstructions() {
   return (
     <Card className="p-4">
       <h2 className="text-sm font-bold">이용 방법</h2>
       <ol className="mt-1.5 list-decimal pl-[18px] text-xs">
-        <li>지도에서 원하는 부스 위치 확인</li>
-        <li>해당 부스로 직접 이동</li>
-        <li>부스의 QR코드 스캔</li>
-        <li>
-          입장 순서가 되면 알림/문자 수신하여 입장
-          <br />
-          (호출 후 10분 안에 입장하지 않을 경우 자동 취소)
-        </li>
+        <li>지도에서 부스 위치 확인</li>
+        <li>부스 현장의 QR을 휴대폰 카메라로 스캔</li>
+        <li>정보 입력 후 대기표 확인</li>
+        <li>호출 후 10분 안에 입장해주세요.</li>
       </ol>
+      <p className="mt-2 text-xs text-muted">호출 여부는 내 대기표와 알림함에서 확인해주세요.</p>
     </Card>
   )
 }
 export function WaitingPage() {
-  const { booths, ticket, setTicket } = useDemo()
-  const [params, setParams] = useSearchParams()
-  const preview = params.get('state') === 'active' || params.get('state') === 'cancel'
-  const [cancelOpen, setCancelOpen] = useState(params.get('state') === 'cancel')
-  const active =
-    ticket ??
-    (preview
-      ? {
-          boothId: 'booth-1',
-          number: 88,
-          people: 2,
-          position: 2,
-          minutes: 0,
-          registered: '2026.09.12. 18:04',
-        }
-      : null)
-  const close = () => {
-    setCancelOpen(false)
-    if (params.get('state') === 'cancel') setParams({ state: 'active' }, { replace: true })
-  }
+  const loader = useCallback(async () => (await useWaitingApi.mine()).data.data, [])
+  const resource = useResource(loader, 5000)
+  const popularLoader = useCallback(
+    async () =>
+      (await useBoothApi.findAll({ sort: 'popular', limit: 3, waitingOnly: true })).data.data.map(
+        boothView,
+      ),
+    [],
+  )
+  const popular = useResource(popularLoader)
+  const active = resource.data?.find((t) => t.status === 'WAITING' || t.status === 'CALLED')
+  const [cancelOpen, setCancelOpen] = useState(false)
+  const action = useAction()
   return (
     <Page title="QR 웨이팅" nav>
       <div className="page-pad !gap-3">
+        <RequestState
+          loading={resource.loading}
+          error={resource.error}
+          retry={() => void resource.refresh()}
+        />
         {active ? (
           <section className="flex flex-col gap-2">
-            <SectionTitle>웨이팅 중인 부스</SectionTitle>
+            <SectionTitle>{active.boothName}</SectionTitle>
             <Card className="p-4">
-              <h2 className="font-bold">웨이팅 순서</h2>
-              <p className="mt-1.5 font-bold text-[#0b5225]">
-                <span className="text-[32px]">{active.position}</span>번째
+              <h2 className="font-bold">{waitingLabels[active.status]}</h2>
+              {active.status === 'WAITING' ? (
+                <>
+                  <p className="mt-1.5 text-[32px] font-bold text-[#0b5225]">
+                    {active.position}번째
+                  </p>
+                  <p className="text-xs">예상 대기 {active.estimatedWaitMinutes}분</p>
+                </>
+              ) : (
+                <p className="mt-2 text-sm text-danger">
+                  호출되었습니다. {active.autoCancelAt && dateText(active.autoCancelAt)}까지
+                  입장해주세요.
+                </p>
+              )}
+              <p className="mt-2 text-sm">
+                웨이팅 번호 <strong>{active.waitingNumber}번</strong> · {active.partySize}명
               </p>
-              <p className="text-xs">
-                웨이팅 번호 <strong>{active.number}번</strong>
-                <span className="ml-4">
-                  남은 시간 <strong>{String(active.minutes).padStart(2, '0')}분</strong>
-                </span>
-              </p>
-              <p className="mt-1 text-xs">{active.registered} 등록</p>
+              <p className="mt-1 text-xs">{dateText(active.registeredAt)} 등록</p>
             </Card>
           </section>
         ) : (
-          <div className="flex h-[201px] flex-col items-center justify-center gap-[18px] rounded-xl bg-[#e8f5ee] p-3">
-            <Asset src={assets['75:2'].imgGroup4} />
-            <div className="text-center">
-              <h2 className="text-lg font-bold">아직 신청한 웨이팅이 없어요.</h2>
-              <p className="mt-2 text-xs">
-                부스에 직접 방문해 현장 QR을 스캔하면
-                <br />
-                웨이팅을 등록할 수 있어요.
-              </p>
-            </div>
-          </div>
+          !resource.loading &&
+          !resource.error && <EmptyState>아직 신청한 웨이팅이 없어요.</EmptyState>
         )}
         <WaitingInstructions />
+        <RequestState error={action.error} />
         {active ? (
-          <>
-            <Button tone="red" onClick={() => setCancelOpen(true)}>
-              웨이팅 취소하기
-            </Button>
-            <div className="primary-button bg-[#bcbcbc]" aria-disabled="true">
-              한 번에 한 개의 부스만 웨이팅 가능
-            </div>
-          </>
+          <Button tone="red" disabled={action.pending} onClick={() => setCancelOpen(true)}>
+            웨이팅 취소하기
+          </Button>
         ) : (
           <Link className="primary-button green-gradient" to="/waiting/scan">
-            <Asset src={assets['75:2'].imgVector1} />
-            부스 QR 스캔하기
+            부스 QR 스캔 안내
           </Link>
         )}
-        <section className="flex flex-col gap-2">
-          <SectionTitle>현재 가장 인기있는 부스 TOP3</SectionTitle>
-          {booths
-            .filter((b) => b.period === 'day')
-            .slice(0, 3)
-            .map((booth) => (
-              <Card key={booth.id} className="px-4">
-                <BoothRow booth={booth} description />
-              </Card>
-            ))}
-        </section>
+        <SectionTitle>현재 가장 인기있는 부스 TOP3</SectionTitle>
+        <RequestState error={popular.error} retry={() => void popular.refresh()} />
+        {popular.data?.map((booth) => (
+          <Card key={booth.id} className="px-4">
+            <BoothRow booth={booth} />
+          </Card>
+        ))}
       </div>
       <ConfirmDialog
         open={cancelOpen}
         title="웨이팅 취소하기"
-        onClose={close}
+        onClose={() => setCancelOpen(false)}
         onConfirm={() => {
-          setTicket(null)
-          setCancelOpen(false)
-          setParams({}, { replace: true })
+          if (active)
+            void action.run(async () => {
+              await useWaitingApi.delete(active.waitingId)
+              setCancelOpen(false)
+              await resource.refresh()
+            })
         }}
       >
-        정말 {booths.find((b) => b.id === active?.boothId)?.name || '해당 부스'}의<br />
-        웨이팅을 취소하시겠습니까?
+        정말 {active?.boothName}의 웨이팅을 취소하시겠습니까?
+        {action.error && (
+          <span role="alert" className="block text-danger">
+            {action.error}
+          </span>
+        )}
       </ConfirmDialog>
     </Page>
   )
 }
 function ScannerBackground() {
-  return (
-    <div className="relative min-h-[calc(100dvh-68px)] rounded-t-xl bg-black text-white">
-      <div className="absolute top-[233px] left-1/2 w-[258px] -translate-x-1/2">
-        <Link
-          to="/waiting/register/booth-1"
-          aria-label="QR 접수 화면 미리보기"
-          className="block aspect-square border-4 border-white"
-        />
-        <p className="mt-5 whitespace-nowrap text-center text-sm font-bold">
-          QR 코드를 사각형 내부에 정확히 인식해주세요.
-        </p>
-      </div>
-    </div>
-  )
+  return <div className="relative min-h-[calc(100dvh-68px)] rounded-t-xl bg-black text-white" />
 }
 export function ScanPage() {
   return (
-    <Page title="QR 웨이팅" back="/waiting" className="!bg-black">
-      <ScannerBackground />
-      <div className="absolute inset-x-5 bottom-5 flex flex-col gap-3">
-        <Link
-          to="/waiting/register/booth-1"
-          className="text-center text-xs text-white/70 underline"
-        >
-          접수 화면 미리보기 · 카메라 연동 준비 중
-        </Link>
-        <Link to="/waiting" className="primary-button bg-[#bcbcbc] !text-[#2a2a2a]">
-          돌아가기
+    <Page title="QR 웨이팅" back="/waiting">
+      <div className="page-pad">
+        <WaitingInstructions />
+        <p className="text-sm">
+          휴대폰 기본 카메라로 부스에 게시된 QR 코드를 스캔하면 접수 화면이 열립니다.
+        </p>
+        <Link to="/waiting" className="primary-button green-gradient">
+          내 대기표 보기
         </Link>
       </div>
     </Page>
   )
 }
+export function QrEntryPage() {
+  const { boothCode = '' } = useParams()
+  const loader = useCallback(
+    async () => (await useBoothApi.findByCode(boothCode)).data.data,
+    [boothCode],
+  )
+  const resource = useResource(loader)
+  if (resource.data) return <Navigate to={`/waiting/register/${resource.data.boothId}`} replace />
+  return (
+    <Page title="QR 웨이팅" back="/waiting">
+      <RequestState
+        loading={resource.loading}
+        error={resource.error}
+        retry={() => void resource.refresh()}
+      />
+    </Page>
+  )
+}
 export function WaitingRegisterPage() {
-  const { boothId } = useParams()
-  const { booths, ticket, setTicket } = useDemo()
+  const { boothId = '' } = useParams()
+  const loader = useCallback(async () => {
+    const [booth, mine, status] = await Promise.all([
+      useBoothApi.find(Number(boothId)),
+      useWaitingApi.mine(),
+      useBoothApi.status(Number(boothId)),
+    ])
+    return {
+      booth: {
+        ...boothView(booth.data.data),
+        teams: status.data.data.waitingTeamCount,
+        minutes: status.data.data.estimatedWaitMinutes,
+        waitingStatus: status.data.data.effectiveWaitingStatus,
+      },
+      ticket: mine.data.data.find((t) => t.status === 'WAITING' || t.status === 'CALLED') || null,
+    }
+  }, [boothId])
+  const resource = useResource(loader)
+  if (!resource.data)
+    return (
+      <Page title="QR 웨이팅" back="/waiting">
+        <RequestState
+          loading={resource.loading}
+          error={resource.error}
+          retry={() => void resource.refresh()}
+        />
+      </Page>
+    )
+  return <RegistrationForm key={boothId} {...resource.data} />
+}
+function RegistrationForm({ booth, ticket }: { booth: Booth; ticket: WaitingTicket | null }) {
+  const action = useAction()
+  const retry = useRef({ body: '', key: '' })
   const navigate = useNavigate()
   const sheetRef = useRef<HTMLElement>(null)
   const formRef = useRef<HTMLFormElement>(null)
@@ -243,24 +273,32 @@ export function WaitingRegisterPage() {
       sheet.style.paddingBottom = ''
     }
   }, [])
-  const booth = booths.find((b) => b.id === boothId && b.period !== 'facility')
-  if (!booth) return <NotFoundPage />
   const submit = (event: FormEvent) => {
     event.preventDefault()
     if (ticket) {
       navigate('/waiting')
       return
     }
-    // Personal information is only validated locally in this prototype and is not stored.
-    setTicket({
-      boothId: booth.id,
-      number: 88,
-      people: Number(people),
-      position: 2,
-      minutes: 0,
-      registered: '2026.09.30. 18:04',
+    void action.run(async () => {
+      const input = {
+        studentNumber: student,
+        phoneNumber: phone,
+        partySize: Number(people),
+        privacyConsent: privacyAgreed,
+      }
+      const body = JSON.stringify(input)
+      if (retry.current.body !== body) retry.current = { body, key: crypto.randomUUID() }
+      try {
+        await useWaitingApi.make(booth.apiId, input, retry.current.key)
+      } catch (e) {
+        if (axios.isAxiosError(e) && e.response?.data?.error?.code === 'W001') {
+          navigate('/waiting', { replace: true })
+          return
+        }
+        throw e
+      }
+      navigate('/waiting', { replace: true })
     })
-    navigate('/waiting', { replace: true })
   }
   return (
     <Page title="QR 웨이팅" back="/waiting/scan" className="!bg-black">
@@ -282,7 +320,7 @@ export function WaitingRegisterPage() {
         </div>
         <Card className="mt-3 !bg-[#f9f9f9] p-4">
           <h2 className="text-sm font-bold">부스 소개</h2>
-          <p className="mt-1.5 text-xs">부스를 만나보세요!</p>
+          <p className="mt-1.5 text-xs">{booth.description}</p>
         </Card>
         <form ref={formRef} className="mt-5 flex flex-col gap-5" onSubmit={submit}>
           <label className="form-field">
@@ -367,9 +405,12 @@ export function WaitingRegisterPage() {
               />
             </button>
             {privacyOpen && (
-              <p id="privacy-details" className="rounded-lg bg-[#f0f2f0] px-3 py-2 text-xs text-muted">
-                웨이팅 등록과 호출 안내를 위해 학번, 전화번호 및 인원 수를 수집·이용합니다.
-                동의를 거부할 수 있으나 웨이팅 접수가 제한됩니다.
+              <p
+                id="privacy-details"
+                className="rounded-lg bg-[#f0f2f0] px-3 py-2 text-xs text-muted"
+              >
+                웨이팅 등록과 호출 안내를 위해 학번, 전화번호 및 인원 수를 수집·이용합니다. 동의를
+                거부할 수 있으나 웨이팅 접수가 제한됩니다.
               </p>
             )}
             <label className="relative ml-auto flex w-fit cursor-pointer items-center gap-2 text-sm font-medium text-[#8b8b8b]">
@@ -392,7 +433,17 @@ export function WaitingRegisterPage() {
               이미 대기 중인 부스가 있어요. 내 대기표를 확인해주세요.
             </p>
           )}
-          <Button type="submit">
+          <RequestState error={action.error} />
+          {!ticket && booth.waitingStatus !== 'OPEN' && (
+            <p role="status" className="text-sm text-danger">
+              현재 접수하지 않는 부스입니다.
+            </p>
+          )}
+          <Button
+            type="submit"
+            formNoValidate={!!ticket}
+            disabled={action.pending || (!ticket && booth.waitingStatus !== 'OPEN')}
+          >
             {ticket ? '내 대기표 보기' : '웨이팅 접수하기'}
           </Button>
         </form>

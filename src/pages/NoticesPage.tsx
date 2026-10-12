@@ -1,13 +1,17 @@
-import { useState } from 'react'
+import { useNotificationApi } from '../hooks/useNotificationApi'
+import { useAction, useResource } from '../hooks/useResource'
+import { RequestState } from '../components/RequestState'
+import { dateText } from '../apis/adapters'
+import { useCallback, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
-import { useDemo } from '../app/demo-context'
+import { useFestival } from '../app/festival-context'
 import { Page, BottomActions } from '../components/layout'
 import { Asset, Card, Chips, EmptyState } from '../components/ui'
 import { EmergencyBanner } from '../components/festival'
 import { figmaAssets as assets } from '../data/figma-assets'
-import { noticeCategories } from '../data/mock'
-import type { Notice } from '../data/mock'
+import { noticeCategories } from '../data/models'
+import type { Notice } from '../data/models'
 import { NotFoundPage } from './UtilityPages'
 
 function NoticeRows({
@@ -59,7 +63,7 @@ function NoticeRows({
   )
 }
 export function NoticesPage({ admin = false }: { admin?: boolean }) {
-  const { notices } = useDemo()
+  const { notices } = useFestival()
   const [params, setParams] = useSearchParams()
   const category = params.get('category') || '전체'
   const urgent = notices.find((n) => n.category === '긴급')
@@ -98,7 +102,7 @@ export function NoticesPage({ admin = false }: { admin?: boolean }) {
 }
 export function NoticeDetailPage() {
   const { id } = useParams()
-  const { notices } = useDemo()
+  const { notices } = useFestival()
   const item = notices.find((n) => n.id === id)
   if (!item) return <NotFoundPage />
   return (
@@ -121,49 +125,79 @@ export function NoticeDetailPage() {
   )
 }
 export function NotificationsPage() {
-  const { notices, setNotices } = useDemo()
-  const [allRead, setAllRead] = useState(false)
-  const markRead = (id: string) => {
-    setNotices((items) =>
-      items.map((n) => (n.id === id ? { ...n, unread: false, notificationUnread: false } : n)),
-    )
-  }
-  const items = notices
-    .filter((n) => n.category !== '긴급')
-    .slice(0, 3)
-    .map((item) => ({ ...item, unread: !allRead && (item.notificationUnread ?? item.unread) }))
+  const [page, setPage] = useState(0)
+  const loader = useCallback(async () => (await useNotificationApi.findAll(page)).data.data, [page])
+  const resource = useResource(loader, 10000)
+  const action = useAction()
+  const { refresh } = useFestival()
   return (
     <Page
       title="알림함"
       action={
         <button
-          type="button"
-          onClick={() => {
-            setAllRead(true)
-            setNotices((items) =>
-              items.map((n) => ({ ...n, unread: false, notificationUnread: false })),
-            )
-          }}
-          className="text-xs font-bold text-brand underline"
+          disabled={action.pending}
+          className="text-xs text-brand underline"
+          onClick={() =>
+            void action.run(async () => {
+              await useNotificationApi.readAll()
+              await resource.refresh()
+              await refresh()
+            })
+          }
         >
           전체 읽음
         </button>
       }
     >
       <div className="page-pad">
-        <NoticeRows items={items} notifications read={allRead} onRead={markRead}>
-          <Link
-            to="/waiting"
-            className="flex min-h-[50px] items-center gap-2 px-4 py-2 text-[#d4d4d4]"
-          >
-            <span className="w-[3px] self-stretch bg-[#d4d4d4]" />
-            <div className="flex-1">
-              <p className="text-sm font-bold">“000” 부스에 입장하실 시간입니다.</p>
-              <p className="mt-1 text-[10px]">09.30. 14:00</p>
-            </div>
-            <Asset src={assets['47:1047'].imgFrame1597881180} />
-          </Link>
-        </NoticeRows>
+        <RequestState
+          loading={resource.loading}
+          error={resource.error}
+          retry={() => void resource.refresh()}
+        />
+        <RequestState error={action.error} />
+        {resource.data && <p className="text-xs">읽지 않은 알림 {resource.data.unreadCount}개</p>}
+        {resource.data?.content.map((item) => (
+          <Card key={item.notificationId} className={`p-4 ${!item.readAt ? '!bg-[#e8f5ee]' : ''}`}>
+            <Link to={item.noticeId ? `/notices/${item.noticeId}` : '/waiting'}>
+              <h2 className="text-sm font-bold">{item.title}</h2>
+              <p className="mt-2 text-xs">{item.body}</p>
+              <p className="mt-2 text-xs text-muted">{dateText(item.createdAt)}</p>
+            </Link>
+            {!item.readAt && (
+              <button
+                disabled={action.pending}
+                className="mt-2 text-xs text-brand underline"
+                onClick={() =>
+                  void action.run(async () => {
+                    await useNotificationApi.read(item.notificationId)
+                    await resource.refresh()
+                    await refresh()
+                  })
+                }
+              >
+                읽음 표시
+              </button>
+            )}
+          </Card>
+        ))}
+        {resource.data?.content.length === 0 && <EmptyState>알림이 없습니다.</EmptyState>}
+        {resource.data && (
+          <div className="flex justify-between text-sm">
+            <button disabled={page === 0} onClick={() => setPage((p) => p - 1)}>
+              이전
+            </button>
+            <span>
+              {page + 1} / {Math.max(1, resource.data.totalPages)}
+            </span>
+            <button
+              disabled={page + 1 >= resource.data.totalPages}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              다음
+            </button>
+          </div>
+        )}
       </div>
     </Page>
   )

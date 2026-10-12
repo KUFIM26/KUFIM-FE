@@ -1,4 +1,6 @@
-import { useEffect } from 'react'
+import { FestivalProvider } from '../app/FestivalProvider'
+import { FestivalContext } from '../app/festival-context'
+import { useContext, useEffect } from 'react'
 import type { ReactNode } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { Asset } from './ui'
@@ -17,7 +19,9 @@ export function RootLayout() {
       >
         본문으로 건너뛰기
       </a>
-      <Outlet />
+      <FestivalProvider key={pathname.startsWith('/admin') ? 'admin' : 'public'}>
+        <Outlet />
+      </FestivalProvider>
     </div>
   )
 }
@@ -35,6 +39,7 @@ export function Header({
   action?: ReactNode
 }) {
   const navigate = useNavigate()
+  const festival = useContext(FestivalContext)?.festival
   useEffect(() => {
     document.title = `${title} · KUFIM`
   }, [title])
@@ -48,7 +53,7 @@ export function Header({
         <div>
           <p className="text-xs font-bold">KUFIM</p>
           <h1 className="mt-0.5 text-lg font-bold max-[360px]:text-base">
-            2026 건국대학교 가을대동제 ‘일감연'
+            {festival?.name || 'KUFIM 축제 안내'}
           </h1>
         </div>
         <Link

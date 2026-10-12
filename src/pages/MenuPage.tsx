@@ -1,18 +1,28 @@
+import { useFestival } from '../app/festival-context'
+import { useAuth } from '../app/auth-context'
+import { useAction } from '../hooks/useResource'
+import { RequestState } from '../components/RequestState'
+import { dateText } from '../apis/adapters'
 import { Link } from 'react-router-dom'
 import { Page } from '../components/layout'
 import { Asset, Card, SectionTitle } from '../components/ui'
 import { figmaAssets as assets } from '../data/figma-assets'
 
 export default function MenuPage({ admin = false }: { admin?: boolean }) {
+  const { festival } = useFestival()
+  const auth = useAuth()
+  const action = useAction()
   const sections = [
     {
       title: '정보',
       items: admin
-        ? [
-            ['공지사항 등록', '/admin/notices'],
-            ['무대 프로그램 관리', '/admin/performances'],
-            ['부스 프로그램 관리', '/admin/booths'],
-          ]
+        ? auth.account?.role === 'BOOTH_ADMIN'
+          ? []
+          : [
+              ['공지사항 등록', '/admin/notices'],
+              ['무대 프로그램 관리', '/admin/performances'],
+              ['부스 프로그램 관리', '/admin/booths'],
+            ]
         : [
             ['공지사항', '/notices'],
             ['전체 프로그램', '/performances'],
@@ -38,27 +48,44 @@ export default function MenuPage({ admin = false }: { admin?: boolean }) {
             <span>FIM</span>
           </div>
           <div>
-            <p className="text-sm font-bold">2026 건국대학교 가을 대동제 ‘일감연'</p>
-            <p className="mt-1 text-xs font-medium">09월 30일 ~ 10월 02일</p>
+            <p className="text-sm font-bold">{festival?.name || '축제 정보 준비 중'}</p>
+            <p className="mt-1 text-xs font-medium">
+              {festival ? `${dateText(festival.startAt)} ~ ${dateText(festival.endAt)}` : ''}
+            </p>
           </div>
         </Card>
-        {sections.map((section) => (
-          <section key={section.title} className="flex flex-col gap-2">
-            <SectionTitle>{section.title}</SectionTitle>
-            <Card className="overflow-hidden">
-              {section.items.map(([label, to]) => (
-                <Link
-                  key={to}
-                  to={to}
-                  className="flex min-h-14 items-center justify-between border-b border-[#eee] px-4 py-4 text-base font-bold text-[#383838] last:border-0"
-                >
-                  {label}
-                  <Asset src={assets['94:255'].imgFrame1597881180} />
-                </Link>
-              ))}
-            </Card>
-          </section>
-        ))}
+        {admin && (
+          <>
+            <p className="text-sm">{auth.account?.name}님</p>
+            <button
+              className="text-sm text-brand underline"
+              disabled={action.pending}
+              onClick={() => void action.run(auth.logout)}
+            >
+              로그아웃
+            </button>
+            <RequestState error={action.error} />
+          </>
+        )}
+        {sections
+          .filter((section) => section.items.length)
+          .map((section) => (
+            <section key={section.title} className="flex flex-col gap-2">
+              <SectionTitle>{section.title}</SectionTitle>
+              <Card className="overflow-hidden">
+                {section.items.map(([label, to]) => (
+                  <Link
+                    key={to}
+                    to={to}
+                    className="flex min-h-14 items-center justify-between border-b border-[#eee] px-4 py-4 text-base font-bold text-[#383838] last:border-0"
+                  >
+                    {label}
+                    <Asset src={assets['94:255'].imgFrame1597881180} />
+                  </Link>
+                ))}
+              </Card>
+            </section>
+          ))}
       </div>
     </Page>
   )

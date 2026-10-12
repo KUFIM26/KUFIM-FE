@@ -1,15 +1,19 @@
+import { useCallback } from 'react'
+import { usePerformanceApi } from '../hooks/usePerformanceApi'
+import { useResource } from '../hooks/useResource'
+import { RequestState } from '../components/RequestState'
+import { performanceView, festivalDays } from '../apis/adapters'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
-import { useDemo } from '../app/demo-context'
+import { useFestival } from '../app/festival-context'
 import { BottomActions, Page } from '../components/layout'
 import { Card } from '../components/ui'
 import { PerformanceFilters, ScheduleList } from '../components/festival'
-import { NotFoundPage } from './UtilityPages'
 
 export function PerformancesPage({ admin = false }: { admin?: boolean }) {
-  const { performances } = useDemo()
+  const { performances, stages, festival } = useFestival()
   const [params, setParams] = useSearchParams()
-  const day = params.get('day') === '2' ? '2' : '1'
-  const stage = params.get('stage') === 'sub' ? 'sub' : 'main'
+  const day = params.get('day') || festivalDays(festival)[0] || performances[0]?.day || ''
+  const stage = params.get('stage') || String(stages[0]?.stageId || '')
   const update = (key: string, value: string) =>
     setParams(
       (previous) => {
@@ -53,18 +57,23 @@ export function PerformancesPage({ admin = false }: { admin?: boolean }) {
 }
 export function PerformanceDetailPage() {
   const { id } = useParams()
-  const { performances } = useDemo()
-  const special = id === 'oxen' || id === 'dius'
-  const base = performances.find((p) => p.id === id) ?? (special ? performances[0] : undefined)
-  if (!base) return <NotFoundPage />
-  const item = special
-    ? {
-        ...base,
-        name: id === 'oxen' ? 'OXEN' : 'DIUS',
-        kind: id === 'oxen' ? '밴드' : '댄스',
-        status: 'now',
-      }
-    : base
+  const { stages } = useFestival()
+  const loader = useCallback(
+    async () => performanceView((await usePerformanceApi.find(Number(id))).data.data, stages),
+    [id, stages],
+  )
+  const resource = useResource(loader)
+  const item = resource.data
+  if (!item)
+    return (
+      <Page title="공연 상세" back="/performances">
+        <RequestState
+          loading={resource.loading}
+          error={resource.error}
+          retry={() => void resource.refresh()}
+        />
+      </Page>
+    )
   return (
     <Page title="공연 상세" back="/performances">
       <div className="page-pad !gap-3 !pt-[22px]">
@@ -77,7 +86,7 @@ export function PerformanceDetailPage() {
           </div>
           <h2 className="text-[22px] font-bold">{item.name}</h2>
           <p className="mt-2 text-sm font-bold">
-            {item.stage === 'main' ? '메인 스테이지' : '서브 스테이지'} {item.time}~{item.end}
+            {item.place} {item.time}~{item.end}
           </p>
         </section>
         <Card className="p-4">

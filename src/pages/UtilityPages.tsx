@@ -1,3 +1,4 @@
+import { useFestival } from '../app/festival-context'
 import { Link } from 'react-router-dom'
 import { Page } from '../components/layout'
 import { BackToList, Card, SectionTitle } from '../components/ui'
@@ -62,13 +63,19 @@ export function GuidePage({ report = false }: { report?: boolean }) {
   )
 }
 export function PreviewPage() {
+  const { booths, performances, notices } = useFestival()
+  const pathFor = (path: string) =>
+    path
+      .replace(':boothId', booths.find((b) => b.waitingEnabled)?.id || 'missing')
+      .replace(':performanceId', performances[0]?.id || 'missing')
+      .replace(':noticeId', notices[0]?.id || 'missing')
   return (
     <Page title="KUFIM 화면 목록" back="/">
       <div className="page-pad">
         <Card className="p-4">
           <p className="text-sm leading-relaxed">
-            Figma의 31개 화면과 상태를 확인하는 목록입니다. 데이터는 데모이며 새로고침하면
-            초기화됩니다.
+            실제 서버 데이터로 화면을 확인하는 목록입니다. 상세 링크는 등록된 항목을 사용하며,
+            관리자 화면에는 로그인이 필요합니다.
           </p>
           <div className="mt-3 flex gap-2">
             <Link className="rounded-full bg-brand px-3 py-2 text-xs font-bold text-white" to="/">
@@ -86,9 +93,9 @@ export function PreviewPage() {
               {screens
                 .filter((s) => s.group === group)
                 .map((screen) => (
-                  <Link key={screen.node} to={screen.path} className="block px-4 py-3">
+                  <Link key={screen.node} to={pathFor(screen.path)} className="block px-4 py-3">
                     <h3 className="text-sm font-bold">{screen.name}</h3>
-                    <p className="mt-1 break-all text-xs text-muted">{screen.path}</p>
+                    <p className="mt-1 break-all text-xs text-muted">{pathFor(screen.path)}</p>
                   </Link>
                 ))}
             </Card>
