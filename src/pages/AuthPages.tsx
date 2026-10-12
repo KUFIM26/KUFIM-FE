@@ -1,3 +1,4 @@
+import { isMockMode } from '../apis/mode'
 import { useState } from 'react'
 import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../app/auth-context'
@@ -55,6 +56,7 @@ export function LoginPage() {
           })
         }}
       >
+        {isMockMode && <p className="mb-4 text-sm text-brand">데모 로그인: admin / demo1234</p>}
         <label className="form-field">
           아이디
           <input

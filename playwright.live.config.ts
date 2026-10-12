@@ -32,7 +32,11 @@ export default defineConfig({
       command: 'npm run build && npm run preview -- --host 127.0.0.1 --port 4174',
       url: 'http://127.0.0.1:4174',
       reuseExistingServer: false,
-      env: { API_PROXY_TARGET: 'http://127.0.0.1:18080', VITE_API_BASE_URL: '/api/v1' },
+      env: {
+        VITE_USE_MOCK: 'false',
+        API_PROXY_TARGET: 'http://127.0.0.1:18080',
+        VITE_API_BASE_URL: '/api/v1',
+      },
     },
   ],
 })

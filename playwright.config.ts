@@ -2,7 +2,7 @@ import { defineConfig } from '@playwright/test'
 
 export default defineConfig({
   testDir: './tests',
-  testIgnore: '**/live/**',
+  testIgnore: ['**/live/**', '**/mock/**'],
   fullyParallel: true,
   workers: 3,
   use: {
@@ -13,6 +13,7 @@ export default defineConfig({
   webServer: {
     command: 'npm run build && npm run preview -- --host 127.0.0.1 --port 4173',
     url: 'http://127.0.0.1:4173',
-    reuseExistingServer: true,
+    reuseExistingServer: false,
+    env: { VITE_USE_MOCK: 'false' },
   },
 })

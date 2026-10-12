@@ -1,6 +1,6 @@
 # KUFIM FE
 
-건국대학교 축제 안내·부스 웨이팅 모바일 웹입니다. React 19, TypeScript, Vite 8, Tailwind CSS 4, React Router 7, Axios를 사용하며 `KUFIM-BE`의 `/api/v1` API에 연결됩니다. 화면 데이터와 저장 작업에 데모 데이터는 사용하지 않습니다.
+건국대학교 축제 안내·부스 웨이팅 모바일 웹입니다. React 19, TypeScript, Vite 8, Tailwind CSS 4, React Router 7, Axios를 사용하며 `KUFIM-BE`의 `/api/v1` API에 연결됩니다. 기본 실행은 서버 없이 작동하는 목업 모드입니다. `VITE_USE_MOCK=false`로 실제 API 연결을 사용할 수 있습니다.
 
 ## 실행
 
@@ -11,6 +11,21 @@ npm install
 cp .env.example .env.local
 npm run dev
 ```
+
+### 서버 없이 체험하기 (기본)
+
+`npm run dev`만 실행하면 축제, 지도, 부스, 시설, 공연, 공지 샘플 데이터가 표시됩니다. 환경변수가 없어도 목업 모드로 실행되며 상단에 목업 안내가 표시됩니다.
+
+- 관리자 계정: **admin / demo1234** (`/admin/login`)
+- 접수 체험: `/w/mock-1` (다른 부스는 `mock-{부스 ID}`), 또는 관리자 부스 설정의 접수 링크
+- 웨이팅 접수·취소·호출·입장·노쇼, 운영 설정, 콘텐츠 등록·수정·삭제, 알림 읽음 지원
+- 데이터는 `localStorage['kufim.mock.v1']`, 데모 로그인은 `sessionStorage['kufim.mock.account']`에 저장됩니다. 새로고침해도 유지되고 다른 브라우저와 공유되지 않습니다.
+- 입력한 학번·전화번호는 저장하지 않습니다. 관리자 연락처 조회에는 샘플 번호가 표시됩니다. 실제 문자 발송과 QR 이미지 생성 대신 접수 링크를 제공합니다.
+- 초기화: 개발자 도구에서 `kufim.mock.v1`과 `kufim.mock.account` 키를 삭제하고 새로고침합니다. 처음 샘플 데이터를 만드는 날부터 3일의 공연 일정이 생성됩니다.
+
+### 실제 서버 연결하기
+
+`.env.local`에 `VITE_USE_MOCK=false`를 지정하고 FE를 재시작하세요. 배포 빌드도 빌드 **전에** 이 값을 지정해야 실제 서버에 연결됩니다. 서버 오류가 나도 목업 데이터로 자동 전환하지 않습니다.
 
 별도 터미널에서 BE를 실행합니다. 처음 관리자 계정을 만들 때만 원하는 개발용 계정을 환경변수로 지정합니다.
 
@@ -35,6 +50,8 @@ src/
     axios.ts                # baseURL, 쿠키·CSRF·방문자 토큰, 오류 처리
     type.ts                 # BE 요청·응답 타입
     adapters.ts             # BE 필드·enum ↔ 화면 표시 데이터
+    mode.ts                 # 목업 / 실제 API 선택
+    mock/                   # 샘플 데이터와 브라우저 내 API 처리
   hooks/
     useAuthApi.ts
     useFestivalApi.ts
@@ -103,9 +120,12 @@ await useNoticeApi.make({
 npm run build
 npm run lint
 npm test
+npm run test:mock
 ```
 
-`npm test`는 브라우저의 API 응답을 테스트 fixture로 제어해 요청 payload·토큰·CSRF·저장·오류·새로고침 복원 등을 검증합니다. 프로덕션 코드에서는 fixture를 가져오지 않습니다. 브라우저가 없으면 `npx playwright install chromium`을 실행하세요.
+`npm run test:mock`은 BE 없이 기본 화면·접수·호출·저장·새로고침 복원을 검증합니다.
+
+`npm test`는 실제 API 모드로 빌드한 뒤 브라우저의 API 응답을 테스트 fixture로 제어해 요청 payload·토큰·CSRF·저장·오류·새로고침 복원 등을 검증합니다. 프로덕션 코드에서는 fixture를 가져오지 않습니다. 브라우저가 없으면 `npx playwright install chromium`을 실행하세요.
 
 실제 BE와 연결하는 검증:
 
@@ -120,6 +140,6 @@ npm run test:integration
 
 ## 배포
 
-`npm run build` 결과는 `dist/`입니다. 운영 환경도 **FE와 같은 origin의 `/api` reverse proxy**를 권장합니다. 현재 `vercel.json`은 SPA fallback만 설정하므로 배포 전에 실제 BE 주소로 `/api/:path*` 전달 규칙을 SPA fallback보다 앞에 추가해야 합니다. 운영 BE 주소가 정해지지 않아 임의의 외부 주소를 넣지는 않았습니다.
+`npm run build` 결과는 `dist/`입니다. 실제 운영 배포에서는 반드시 `VITE_USE_MOCK=false`를 설정한 상태로 빌드하세요. 운영 환경도 **FE와 같은 origin의 `/api` reverse proxy**를 권장합니다. 현재 `vercel.json`은 SPA fallback만 설정하므로 배포 전에 실제 BE 주소로 `/api/:path*` 전달 규칙을 SPA fallback보다 앞에 추가해야 합니다. 운영 BE 주소가 정해지지 않아 임의의 외부 주소를 넣지는 않았습니다.
 
 별도 origin의 절대 API 주소를 사용할 경우 BE CORS·세션 쿠키·CSRF 쿠키 접근 구성을 함께 맞춰야 합니다. API 호스트 전용 쿠키를 FE가 읽을 수 없는 배포에서는 `withCredentials`만 설정해도 CSRF 헤더가 생기지는 않습니다. 기본 same-origin proxy 구성을 사용하면 이를 피할 수 있습니다. 운영 QR의 `FRONTEND_BASE_URL`도 실제 FE 주소로 설정하세요.

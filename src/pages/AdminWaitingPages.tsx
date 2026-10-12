@@ -1,3 +1,4 @@
+import { isMockMode } from '../apis/mode'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
@@ -236,7 +237,10 @@ function SettingsForm({
   const action = useAction()
   const navigate = useNavigate()
   const back = `/admin/waiting/${boothId}`
-  const qrLoader = useCallback(async () => (await useBoothApi.qr(boothId)).data, [boothId])
+  const qrLoader = useCallback(
+    async () => (isMockMode ? null : (await useBoothApi.qr(boothId)).data),
+    [boothId],
+  )
   const qr = useResource(qrLoader)
   useEffect(() => {
     if (!qr.data) return
@@ -292,7 +296,17 @@ function SettingsForm({
           <input className="form-control" value={10} readOnly aria-readonly="true" />
           <span className="text-xs text-muted">최초 호출 후 10분으로 고정됩니다.</span>
         </label>
-        <SectionTitle>대기 QR 보기</SectionTitle>
+        <SectionTitle>{isMockMode ? '접수 체험' : '대기 QR 보기'}</SectionTitle>
+        {isMockMode && (
+          <Card className="p-4">
+            <p className="mb-2 text-sm">
+              목업에서는 아래 링크로 QR 접수 흐름을 체험할 수 있습니다.
+            </p>
+            <Link className="text-brand underline" to={`/w/mock-${boothId}`}>
+              이 부스 웨이팅 접수하기
+            </Link>
+          </Card>
+        )}
         <RequestState loading={qr.loading} error={qr.error} retry={() => void qr.refresh()} />
         {qrUrl && (
           <Card className="flex flex-col items-center gap-4 p-5">
