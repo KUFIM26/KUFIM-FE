@@ -13,6 +13,59 @@ async function login(page: import('@playwright/test').Page) {
   await page.getByRole('button', { name: '로그인', exact: true }).click()
   await expect(page).toHaveURL(/\/admin$/)
 }
+test('home keeps the emergency banner and program card with mock API data', async ({ page }) => {
+  await page.goto('/')
+  await expect(page.getByText('우천으로 인한 야간 부스 운영 시간 조정 안내')).toBeVisible()
+  await expect(page.getByText('DAY 1', { exact: true })).toBeVisible()
+  await expect(page.locator('#main-content a[href="/performances/1"]').first()).toContainText(
+    '함께 즐기는 건국대학교 축제 공연입니다.',
+  )
+})
+test('programs keep two days and switch schedules on visitor and admin screens', async ({ page }) => {
+  await page.goto('/performances?day=2000-01-01')
+  const day1 = page.getByRole('button', { name: /^DAY 1 / })
+  const day2 = page.getByRole('button', { name: /^DAY 2 / })
+  await expect(page.getByRole('button', { name: /^DAY / })).toHaveCount(2)
+  await expect(day1).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByRole('link', { name: /청춘 밴드 라이브/ })).toBeVisible()
+  await day2.click()
+  await expect(page.getByRole('link', { name: /어쿠스틱 콘서트/ })).toBeVisible()
+  await expect(page.getByRole('link', { name: /학생 가요제/ })).toBeVisible()
+  await page.getByRole('button', { name: '일감호 무대', exact: true }).click()
+  await expect(page.getByRole('link', { name: /축제 피날레/ })).toBeVisible()
+  await page.reload()
+  await expect(day2).toHaveAttribute('aria-pressed', 'true')
+  await login(page)
+  await page.goto('/admin/performances')
+  await expect(page.getByRole('button', { name: /^DAY / })).toHaveCount(2)
+  await day2.click()
+  await page.getByRole('link', { name: '무대 프로그램 등록하기' }).click()
+  await expect(day2).toHaveAttribute('aria-pressed', 'true')
+})
+for (const customized of [false, true]) {
+  test(`old three-day sample migrates only when unedited (customized: ${customized})`, async ({ page }) => {
+    await page.goto('/performances')
+    await expect(page.getByRole('button', { name: /^DAY / })).toHaveCount(2)
+    await page.evaluate((edited) => {
+      const state = JSON.parse(localStorage.getItem('kufim.mock.v1')!)
+      state.endAt = new Date(Date.parse(state.endAt) + 86400000).toISOString()
+      state.performances.forEach((p: { startAt: string; endAt: string }, index: number) => {
+        const date = new Date(Date.parse(state.startAt) + Math.floor(index / 2) * 86400000)
+        const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(date)
+        const hour = index % 2 ? 19 : 15
+        p.startAt = `${day}T${hour}:00:00+09:00`
+        p.endAt = `${day}T${hour + 1}:00:00+09:00`
+      })
+      if (edited) state.performances[5].title = '직접 등록한 피날레'
+      localStorage.setItem('kufim.mock.v1', JSON.stringify(state))
+    }, customized)
+    await page.reload()
+    await expect(page.getByRole('button', { name: /^DAY / })).toHaveCount(customized ? 3 : 2)
+    const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('kufim.mock.v1')!))
+    expect(saved.performances).toHaveLength(6)
+    expect(saved.performances[5].title).toBe(customized ? '직접 등록한 피날레' : '축제 피날레')
+  })
+}
 test('all visitor screens work without a backend', async ({ page }) => {
   const errors: string[] = []
   page.on('pageerror', (e) => errors.push(e.message))
@@ -61,6 +114,7 @@ test('registration survives reload, admin calls and enters, notification read pe
   await page.goto('/notifications')
   await expect(page.getByText('입장할 차례예요!')).toBeVisible()
   await page.getByRole('button', { name: '전체 읽음' }).click()
+  await expect(page.getByText('읽지 않은 알림 0개')).toBeVisible()
   await page.reload()
   await expect(page.getByText('읽지 않은 알림 0개')).toBeVisible()
 })

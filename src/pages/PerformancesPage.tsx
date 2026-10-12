@@ -2,7 +2,7 @@ import { useCallback } from 'react'
 import { usePerformanceApi } from '../hooks/usePerformanceApi'
 import { useResource } from '../hooks/useResource'
 import { RequestState } from '../components/RequestState'
-import { performanceView, festivalDays } from '../apis/adapters'
+import { performanceView, performanceDays } from '../apis/adapters'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useFestival } from '../app/festival-context'
 import { BottomActions, Page } from '../components/layout'
@@ -12,7 +12,9 @@ import { PerformanceFilters, ScheduleList } from '../components/festival'
 export function PerformancesPage({ admin = false }: { admin?: boolean }) {
   const { performances, stages, festival } = useFestival()
   const [params, setParams] = useSearchParams()
-  const day = params.get('day') || festivalDays(festival)[0] || performances[0]?.day || ''
+  const days = performanceDays(festival, performances)
+  const requestedDay = params.get('day') || ''
+  const day = days.includes(requestedDay) ? requestedDay : days[0] || ''
   const stage = params.get('stage') || String(stages[0]?.stageId || '')
   const update = (key: string, value: string) =>
     setParams(

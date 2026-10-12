@@ -1,5 +1,5 @@
 import { useFestival } from '../app/festival-context'
-import { festivalDays, seoulDate } from '../apis/adapters'
+import { festivalDays, performanceDays, seoulDate } from '../apis/adapters'
 import type { Booth as MapBooth } from '../data/models'
 import { Link } from 'react-router-dom'
 import { Asset, Card, EmptyState, Tabs } from './ui'
@@ -47,13 +47,14 @@ export function EmergencyBanner({
 export function FestivalMeta() {
   const { festival } = useFestival()
   if (!festival) return null
+  const today = seoulDate(festival.serverTime)
+  const days = festivalDays(festival)
+  const day = days.indexOf(today)
   return (
-    <div className="flex flex-wrap gap-1.5 text-[10px] font-bold">
-      <span>{festival.name}</span>
-      <span>
-        {seoulDate(festival.startAt)} ~ {seoulDate(festival.endAt)}
-      </span>
-      <span>{festival.location}</span>
+    <div className="flex flex-wrap items-center gap-1.5 text-[8px] font-bold text-white">
+      {day >= 0 && <span className="rounded-xl bg-white/50 px-1.5 py-px">DAY {day + 1}</span>}
+      <span>{today.replaceAll('-', '.')}.</span>
+      {festival.location && <span>{festival.location}</span>}
     </div>
   )
 }
@@ -114,7 +115,7 @@ export function PerformanceFilters({
   onStage: (value: string) => void
 }) {
   const { festival, stages, performances } = useFestival()
-  const days = [...new Set([...festivalDays(festival), ...performances.map((p) => p.day)])].sort()
+  const days = performanceDays(festival, performances)
   return (
     <div className="flex flex-col gap-3 px-5 pt-3">
       <div className="overflow-x-auto">

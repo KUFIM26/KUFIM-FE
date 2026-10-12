@@ -20,14 +20,15 @@ export type MockState = {
   tickets: MockTicket[]
   configs: Record<number, WaitingConfig>
   requests: Record<string, string>
+  demoOngoing?: boolean
   startAt: string
   endAt: string
 }
-export function createSeed(): MockState {
-  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(new Date())
+export function createSeed(at = new Date()): MockState {
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(at)
   const startAt = `${today}T09:00:00+09:00`
   const end = new Date(startAt)
-  end.setDate(end.getDate() + 2)
+  end.setDate(end.getDate() + 1)
   const last = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(end)
   const names = [
     '총학생회 간식 부스',
@@ -69,9 +70,9 @@ export function createSeed(): MockState {
   }))
   const performances: PerformanceDto[] = Array.from({ length: 6 }, (_, index) => {
     const date = new Date(startAt)
-    date.setDate(date.getDate() + Math.floor(index / 2))
+    date.setDate(date.getDate() + Math.min(1, Math.floor(index / 2)))
     const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(date)
-    const hour = index % 2 ? 19 : 15
+    const hour = index >= 4 ? 21 : index % 2 ? 19 : 15
     return {
       performanceId: index + 1,
       festivalId: 1,
@@ -86,6 +87,7 @@ export function createSeed(): MockState {
         '축제 피날레',
       ][index],
       type: index % 2 ? 'DANCE' : 'BAND',
+      status: index === 0 ? 'NOW' : 'NEXT',
       startAt: `${day}T${hour}:00:00+09:00`,
       endAt: `${day}T${hour + 1}:00:00+09:00`,
       description: '함께 즐기는 건국대학교 축제 공연입니다.',
@@ -95,6 +97,13 @@ export function createSeed(): MockState {
     }
   })
   const notices: NoticeDto[] = [
+    {
+      noticeId: 4,
+      title: '우천으로 인한 야간 부스 운영 시간 조정 안내',
+      content: '우천으로 야간 부스 운영 시간이 조정됩니다. 현장 안내를 확인해주세요.',
+      category: 'URGENT',
+      publishedAt: startAt,
+    },
     {
       noticeId: 1,
       title: '축제 이용 안내',
@@ -124,6 +133,7 @@ export function createSeed(): MockState {
     notices,
     tickets: [],
     requests: {},
+    demoOngoing: true,
     startAt,
     endAt: `${last}T23:00:00+09:00`,
     configs: Object.fromEntries(

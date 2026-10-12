@@ -3,14 +3,17 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useFestival } from '../app/festival-context'
 import { Page } from '../components/layout'
-import { Asset, SectionTitle } from '../components/ui'
+import { Asset, EmptyState, SectionTitle } from '../components/ui'
 import { EmergencyBanner, FestivalMeta, ScheduleList, Stats } from '../components/festival'
 import { figmaAssets as assets } from '../data/figma-assets'
 
 export default function HomePage() {
   const [showNotice, setShowNotice] = useState(true)
-  const { performances, notices, festival } = useFestival()
+  const { performances, notices, festival, stages } = useFestival()
   const a = assets['17:303']
+  const currentPerformances = performances.filter((performance) => performance.status === 'now')
+  const primaryStageId = stages[0]?.stageId
+  const today = seoulDate(festival?.serverTime || new Date().toISOString())
   const shortcuts = [
     { to: '/map', label: '축제 지도', icon: a.imgVector3 },
     { to: '/waiting', label: 'QR 웨이팅', icon: a.imgGroup },
@@ -60,13 +63,34 @@ export default function HomePage() {
         </div>
         <section className="flex flex-col gap-2">
           <SectionTitle>현재 진행 중인 프로그램</SectionTitle>
-          <ScheduleList items={performances.filter((p) => p.status === 'now')} />
+          {currentPerformances.length ? (
+            currentPerformances.map((item, index) => (
+              <Link
+                to={`/performances/${item.id}`}
+                className="card flex items-center justify-between gap-3 p-4"
+                key={item.id}
+              >
+                <div>
+                  <h3 className="text-base font-bold">{item.name}</h3>
+                  <p className="mt-1.5 text-xs font-medium">
+                    {item.place}
+                    <span className="mx-1.5">|</span>
+                    {item.time}~{item.end}
+                  </p>
+                  {item.description && <p className="mt-1.5 text-xs">{item.description}</p>}
+                </div>
+                <Asset src={index % 2 ? a.imgVector6 : a.imgVector5} />
+              </Link>
+            ))
+          ) : (
+            <EmptyState>현재 진행 중인 프로그램이 없어요.</EmptyState>
+          )}
         </section>
         <section className="flex flex-col gap-2">
           <SectionTitle>오늘의 무대</SectionTitle>
           <ScheduleList
             items={performances.filter(
-              (p) => p.date === seoulDate(festival?.serverTime || new Date().toISOString()),
+              (p) => p.date === today && (primaryStageId === undefined || p.stage === String(primaryStageId)),
             )}
           />
         </section>

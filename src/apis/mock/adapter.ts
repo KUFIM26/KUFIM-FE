@@ -9,7 +9,65 @@ const now = () => new Date().toISOString()
 function load(): MockState {
   try {
     const saved = localStorage.getItem(MOCK_STORAGE_KEY)
-    if (saved) return JSON.parse(saved)
+    if (saved) {
+      const state = JSON.parse(saved) as MockState
+      // Upgrade only the untouched three-day sample schedule; keep custom programs intact.
+      const sample = createSeed(new Date(state.startAt))
+      const legacyEnd = new Date(Date.parse(sample.endAt) + 86400000)
+      const isLegacySample =
+        Date.parse(state.endAt) === legacyEnd.getTime() &&
+        state.performances.length === sample.performances.length &&
+        sample.performances.every((expected, index) => {
+          const actual = state.performances.find((p) => p.performanceId === expected.performanceId)
+          if (!actual) return false
+          const sameContent = Object.entries(expected).every(
+            ([key, value]) =>
+              ['startAt', 'endAt', 'status'].includes(key) ||
+              actual[key as keyof typeof actual] === value,
+          )
+          const date = new Date(Date.parse(state.startAt) + Math.floor(index / 2) * 86400000)
+          const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(date)
+          const hour = index % 2 ? 19 : 15
+          const sameTime =
+            (index === 0 && state.demoOngoing === true) ||
+            (Date.parse(actual.startAt) === Date.parse(`${day}T${hour}:00:00+09:00`) &&
+              Date.parse(actual.endAt) === Date.parse(`${day}T${hour + 1}:00:00+09:00`))
+          return sameContent && sameTime
+        })
+      if (isLegacySample) {
+        state.endAt = sample.endAt
+        state.performances = sample.performances
+      }
+      // Keep the original sample program visible when upgrading an older demo store.
+      if (state.demoOngoing === undefined && state.performances[0]?.title === '청춘 밴드 라이브')
+        state.demoOngoing = true
+      if (
+        state.notices.length === 3 &&
+        ['축제 이용 안내', '공연장 입장 안내', '안전한 축제를 위한 안내'].every(
+          (title, index) => state.notices[index]?.title === title,
+        )
+      ) {
+        const urgent = {
+          noticeId: 4,
+          title: '우천으로 인한 야간 부스 운영 시간 조정 안내',
+          content: '우천으로 야간 부스 운영 시간이 조정됩니다. 현장 안내를 확인해주세요.',
+          category: 'URGENT' as const,
+          publishedAt: state.startAt,
+        }
+        state.notices.unshift(urgent)
+        state.notifications.unshift({
+          notificationId: urgent.noticeId,
+          type: 'NOTICE',
+          title: urgent.title,
+          body: urgent.content,
+          noticeId: urgent.noticeId,
+          waitingId: null,
+          createdAt: urgent.publishedAt,
+          readAt: null,
+        })
+      }
+      return state
+    }
   } catch {
     /* A cleared or invalid demo store starts with fresh sample content. */
   }
@@ -18,6 +76,30 @@ function load(): MockState {
 
 export const mockAdapter: AxiosAdapter = async (config) => {
   const state = load()
+  if (
+    state.demoOngoing &&
+    state.performances[0]?.title === '청춘 밴드 라이브' &&
+    Date.now() >= Date.parse(state.startAt.slice(0, 10) + 'T00:00:00+09:00') &&
+    Date.now() <= Date.parse(state.endAt)
+  ) {
+    const current = Date.now()
+    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(current)
+    const startOfDay = Date.parse(`${today}T00:00:00+09:00`)
+    const endOfDay = Date.parse(`${today}T23:59:59+09:00`)
+    state.performances[0].startAt = new Date(
+      Math.max(startOfDay, current - 30 * 60000),
+    ).toISOString()
+    state.performances[0].endAt = new Date(Math.min(endOfDay, current + 30 * 60000)).toISOString()
+    state.performances[0].status = 'NOW'
+  }
+  for (const performance of state.performances) {
+    performance.status =
+      Date.parse(performance.endAt) <= Date.now()
+        ? 'PAST'
+        : Date.parse(performance.startAt) > Date.now()
+          ? 'NEXT'
+          : 'NOW'
+  }
   const path = (config.url || '').split('?')[0]
   const method = (config.method || 'get').toUpperCase()
   const input = typeof config.data === 'string' ? JSON.parse(config.data) : config.data || {}
@@ -110,7 +192,7 @@ export const mockAdapter: AxiosAdapter = async (config) => {
   if (path === '/festival')
     return response({
       festivalId: 1,
-      name: '건국대학교 축제',
+      name: '2026 건국대학교 가을대동제 ‘일감연’',
       location: '건국대학교 서울캠퍼스',
       startAt: state.startAt,
       endAt: state.endAt,
@@ -130,8 +212,8 @@ export const mockAdapter: AxiosAdapter = async (config) => {
     })
   if (path === '/stages')
     return response([
-      { stageId: 1, name: '대운동장 무대', entryStatus: 'OPEN', displayOrder: 0 },
-      { stageId: 2, name: '일감호 무대', entryStatus: 'OPEN', displayOrder: 1 },
+      { stageId: 1, name: '메인 무대', entryStatus: 'OPEN', displayOrder: 0 },
+      { stageId: 2, name: '황소상 무대', entryStatus: 'OPEN', displayOrder: 1 },
     ])
   if (path === '/map')
     return response({ floorplan: { imageUrl: '/assets/mock-map.svg', width: 800, height: 1000 } })
@@ -365,6 +447,8 @@ export const mockAdapter: AxiosAdapter = async (config) => {
           (a, b) => queue(Number(b.boothId)).length - queue(Number(a.boothId)).length,
         )
       if (config.params?.limit) list = list.slice(0, Number(config.params.limit))
+      if (resource === 'performances')
+        list = [...list].sort((a, b) => String(a.startAt).localeCompare(String(b.startAt)))
       return response(list)
     }
     if (!contentRoute[1]) return fail(403, '관리자 요청이 필요합니다.')
@@ -373,11 +457,13 @@ export const mockAdapter: AxiosAdapter = async (config) => {
       if (resource === 'booths' && queue(id).length)
         return fail(409, '대기 중인 팀이 있는 부스는 삭제할 수 없습니다.')
       rows.splice(rows.indexOf(row), 1)
+      if (resource === 'performances' && id === 1) state.demoOngoing = false
       return response(null, 204)
     }
     if (method === 'POST' || method === 'PATCH') {
       if (method === 'PATCH' && !row) return fail(404, '항목을 찾을 수 없습니다.')
       const newId = row ? id : Math.max(0, ...rows.map((r) => Number(r[idKey]))) + 1
+      if (resource === 'performances' && row && id === 1) state.demoOngoing = false
       const saved = { ...(row || {}), ...input, [idKey]: newId }
       if (resource === 'notices') saved.publishedAt ||= now()
       if (resource === 'booths') {

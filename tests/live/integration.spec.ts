@@ -65,6 +65,7 @@ test('real Spring Boot session, catalog saves, QR, registration, restoration, ca
   const performances = await page.request.get('/api/v1/performances')
   const performance = (await performances.json()).data[0]
   expect(performance.stageId).toBe(stage.stageId)
+  expect(performance.description).toBe('공연 저장 검증')
   await page.goto(`/admin/booths/${booth.boothId}/edit`)
   await expect(page.getByRole('textbox', { name: '부스 소개', exact: true })).toHaveValue(
     '실제 DB의 부스',

@@ -64,6 +64,9 @@ export function festivalDays(festival: Festival | null) {
     (_, i) => new Date(start + i * 86400000).toISOString().slice(0, 10),
   )
 }
+export function performanceDays(festival: Festival | null, performances: Performance[]) {
+  return [...new Set([...festivalDays(festival), ...performances.map((p) => p.day)])].sort()
+}
 export function boothView(b: BoothDto): Booth {
   return {
     id: String(b.boothId),
@@ -115,12 +118,13 @@ export function performanceView(p: PerformanceDto, stages: Stage[]): Performance
   }
 }
 export function noticeView(n: NoticeDto): Notice {
+  const day = seoulDate(n.publishedAt)
   return {
     id: String(n.noticeId),
     title: n.title,
     body: n.content,
     category: noticeLabels[n.category],
-    date: dateText(n.publishedAt),
+    date: `${day.slice(5).replace('-', '.')}. ${time(n.publishedAt)}`,
     unread: n.unread === true,
   }
 }
