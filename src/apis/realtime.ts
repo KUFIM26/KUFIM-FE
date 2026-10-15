@@ -2,7 +2,6 @@ import { useEffect, useRef, useSyncExternalStore } from 'react'
 import { Client } from '@stomp/stompjs'
 import type { StompSubscription } from '@stomp/stompjs'
 import { getClientToken } from './axios'
-import { isMockMode } from './mode'
 
 type Entry = { listeners: Set<() => void>; subscription?: StompSubscription }
 const entries = new Map<string, Entry>()
@@ -24,7 +23,7 @@ function attach(destination: string, entry: Entry) {
 }
 function ensureClient() {
   window.clearTimeout(idleTimer)
-  if (client || isMockMode) return
+  if (client) return
   // VITE_API_BASE_URL includes /api/v1; the broker is /ws on that origin.
   const url = new URL(import.meta.env.VITE_API_BASE_URL || '/api/v1', window.location.href)
   url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:'
@@ -106,14 +105,13 @@ export function useTopics(destinations: string[], onChange: () => void) {
   })
   const key = JSON.stringify([...new Set(destinations)].sort())
   useEffect(() => {
-    if (isMockMode) return
     const releases = (JSON.parse(key) as string[]).map((destination) =>
       subscribe(destination, () => handler.current()),
     )
     return () => releases.forEach((release) => release())
   }, [key])
   const live = useRealtimeConnected()
-  return !isMockMode && destinations.length > 0 && live
+  return destinations.length > 0 && live
 }
 export function useTopic(destination: string | null, onChange: () => void) {
   return useTopics(destination ? [destination] : [], onChange)

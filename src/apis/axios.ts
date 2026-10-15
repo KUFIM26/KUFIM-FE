@@ -1,6 +1,5 @@
 import axios from 'axios'
 import type { ApiResponse } from './type'
-import { isMockMode } from './mode'
 
 export const SESSION_EXPIRED = 'kufim:session-expired'
 const CLIENT_TOKEN_KEY = 'kufim.clientToken'
@@ -26,9 +25,6 @@ const api = axios.create({
   xsrfHeaderName: 'X-XSRF-TOKEN',
   withXSRFToken: true,
   timeout: 15000,
-  ...(isMockMode
-    ? { adapter: async (config) => (await import('./mock/adapter')).mockAdapter(config) }
-    : {}),
 })
 
 api.interceptors.request.use((config) => {

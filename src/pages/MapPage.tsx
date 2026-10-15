@@ -28,7 +28,26 @@ export default function MapPage() {
       : b.period === period && (category === '전체' || b.category === category),
   )
   return (
-    <Page title="축제 지도" nav className="!pb-0 overflow-hidden">
+    <Page
+      title="축제 지도"
+      nav
+      navAction={
+        !list && (
+          <button
+            type="button"
+            onClick={() => update('view', 'list')}
+            className="flex items-center gap-2 whitespace-nowrap rounded-full bg-brand px-3 py-2 text-base leading-5 font-bold text-white"
+          >
+            <Asset src={assets['53:1227'].imgVector3} />
+            리스트 보기
+            <span className="flex h-5 items-center rounded-[10px] bg-white/30 px-1 text-xs">
+              {items.length}
+            </span>
+          </button>
+        )
+      }
+      className="!pb-0 overflow-hidden"
+    >
       <div className="px-5 pt-3">
         <Tabs
           value={period}
@@ -69,17 +88,6 @@ export default function MapPage() {
           })}
           className="w-full"
         />
-        {!list && (
-          <button
-            type="button"
-            onClick={() => update('view', 'list')}
-            className="absolute bottom-[91px] left-1/2 flex -translate-x-1/2 items-center gap-2 whitespace-nowrap rounded-full bg-brand px-3 py-2 text-base font-bold text-white"
-          >
-            <Asset src={assets['53:1227'].imgVector3} />
-            리스트 보기
-            <span className="rounded-full bg-white/25 px-1.5 text-xs">{items.length}</span>
-          </button>
-        )}
         {list && (
           <section
             aria-label="지도 부스 목록"

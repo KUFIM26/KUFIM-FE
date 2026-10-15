@@ -1,7 +1,6 @@
 import axios from 'axios'
 import { useAuth } from '../app/auth-context'
 import { pollEvery, useRealtimeConnected, useTopic } from '../apis/realtime'
-import { isMockMode } from '../apis/mode'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
@@ -104,11 +103,9 @@ export function AdminQueuePage() {
             {message}
           </p>
         )}
-        {!isMockMode && (
-          <p role="status" className="text-xs text-muted">
-            {live ? '실시간 연결됨' : '실시간 연결 대기 · 주기적으로 갱신 중'}
-          </p>
-        )}
+        <p role="status" className="text-xs text-muted">
+          {live ? '실시간 연결됨' : '실시간 연결 대기 · 주기적으로 갱신 중'}
+        </p>
         <SectionTitle>대기 명단</SectionTitle>
         {queue && !items.length && <EmptyState>현재 대기 중인 팀이 없어요.</EmptyState>}
         {items.map((item) => (
@@ -250,7 +247,6 @@ function SettingsForm({
   const navigate = useNavigate()
   const back = `/admin/waiting/${boothId}`
   const qrLoader = useCallback(async () => {
-    if (isMockMode) return null
     try {
       return (await useBoothApi.qr(boothId)).data
     } catch (error) {
@@ -317,19 +313,9 @@ function SettingsForm({
           <input className="form-control" value={10} readOnly aria-readonly="true" />
           <span className="text-xs text-muted">최초 호출 후 10분으로 고정됩니다.</span>
         </label>
-        <SectionTitle>{isMockMode ? '접수 체험' : '대기 QR 보기'}</SectionTitle>
-        {isMockMode && (
-          <Card className="p-4">
-            <p className="mb-2 text-sm">
-              목업에서는 아래 링크로 QR 접수 흐름을 체험할 수 있습니다.
-            </p>
-            <Link className="text-brand underline" to={`/w/mock-${boothId}`}>
-              이 부스 웨이팅 접수하기
-            </Link>
-          </Card>
-        )}
+        <SectionTitle>대기 QR 보기</SectionTitle>
         <RequestState loading={qr.loading} error={qr.error} retry={() => void qr.refresh()} />
-        {!isMockMode && !qr.loading && !qr.error && qr.data === null && (
+        {!qr.loading && !qr.error && qr.data === null && (
           <Card className="flex flex-col gap-3 p-4">
             <p className="text-sm">아직 발급된 QR 코드가 없습니다.</p>
             {account?.role === 'SUPER_ADMIN' ? (

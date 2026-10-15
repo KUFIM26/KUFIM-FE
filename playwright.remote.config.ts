@@ -18,7 +18,6 @@ export default defineConfig({
     url: 'http://localhost:4176',
     reuseExistingServer: false,
     env: {
-      VITE_USE_MOCK: 'false',
       VITE_API_BASE_URL: '/api/v1',
       API_PROXY_TARGET: 'https://32-236-74-117.sslip.io',
     },

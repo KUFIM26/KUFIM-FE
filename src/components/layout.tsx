@@ -87,6 +87,7 @@ export function Page({
   back,
   plain,
   nav = false,
+  navAction,
   home,
   action,
   children,
@@ -96,6 +97,7 @@ export function Page({
   back?: string
   plain?: boolean
   nav?: boolean
+  navAction?: ReactNode
   home?: boolean
   action?: ReactNode
   children: ReactNode
@@ -119,11 +121,11 @@ export function Page({
       >
         {children}
       </main>
-      {nav && <BottomNav />}
+      {nav && <BottomNav action={navAction} />}
     </>
   )
 }
-function BottomNav() {
+function BottomNav({ action }: { action?: ReactNode }) {
   const links = [
     {
       to: '/',
@@ -151,31 +153,36 @@ function BottomNav() {
     },
   ]
   return (
-    <nav
-      aria-label="주 메뉴"
-      className="fixed bottom-4 left-1/2 z-40 flex w-[calc(100%-32px)] max-w-[361px] -translate-x-1/2 justify-between rounded-[15px] bg-white px-[23px] py-1.5 shadow-nav"
+    <div
+      className="pointer-events-none fixed left-1/2 z-40 flex w-[calc(100%-32px)] max-w-[361px] -translate-x-1/2 flex-col items-center gap-[15px]"
       style={{ bottom: 'max(16px, env(safe-area-inset-bottom))' }}
     >
-      {links.map((link) => (
-        <NavLink
-          key={link.to}
-          to={link.to}
-          end={link.to === '/'}
-          className={({ isActive }) =>
-            `flex w-[44.529px] flex-col items-center text-[10.687px] font-semibold ${isActive ? 'text-brand' : 'text-black'}`
-          }
-        >
-          {({ isActive }) => (
-            <>
-              <span className="flex h-[35.623px] items-center justify-center">
-                <Asset src={isActive ? link.active : link.normal} />
-              </span>
-              <span>{link.label}</span>
-            </>
-          )}
-        </NavLink>
-      ))}
-    </nav>
+      {action && <div className="pointer-events-auto">{action}</div>}
+      <nav
+        aria-label="주 메뉴"
+        className="pointer-events-auto flex w-full justify-between rounded-[15px] bg-white px-[23px] py-1.5 shadow-nav"
+      >
+        {links.map((link) => (
+          <NavLink
+            key={link.to}
+            to={link.to}
+            end={link.to === '/'}
+            className={({ isActive }) =>
+              `flex w-[44.529px] flex-col items-center text-[10.687px] font-semibold ${isActive ? 'text-brand' : 'text-black'}`
+            }
+          >
+            {({ isActive }) => (
+              <>
+                <span className="flex h-[35.623px] items-center justify-center">
+                  <Asset src={isActive ? link.active : link.normal} />
+                </span>
+                <span>{link.label}</span>
+              </>
+            )}
+          </NavLink>
+        ))}
+      </nav>
+    </div>
   )
 }
 export function BottomActions({ children }: { children: ReactNode }) {

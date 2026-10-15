@@ -308,7 +308,8 @@ export async function mockApi(
       })
     if (path.startsWith('/notifications/') && method === 'PATCH') {
       state.notifications.forEach((n) => {
-        n.readAt = ticket.serverTime
+        if (path.endsWith('/read-all') || n.notificationId === Number(path.split('/')[2]))
+          n.readAt = ticket.serverTime
       })
       return ok(route, { readCount: 1, unreadCount: 0 })
     }

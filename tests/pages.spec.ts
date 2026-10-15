@@ -143,9 +143,9 @@ test('notifications persist read state', async ({ page }) => {
   const state = await mockApi(page)
   await page.goto('/notifications')
   await page.getByRole('button', { name: '전체 읽음' }).click()
-  await expect(page.getByText('읽지 않은 알림 0개')).toBeVisible()
+  await expect(page.getByText('읽지 않은 알림 0개')).toHaveText('읽지 않은 알림 0개')
   await page.reload()
-  await expect(page.getByText('읽지 않은 알림 0개')).toBeVisible()
+  await expect(page.getByText('읽지 않은 알림 0개')).toHaveText('읽지 않은 알림 0개')
   expect(state.notifications[0].readAt).not.toBeNull()
 })
 

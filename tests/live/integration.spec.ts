@@ -140,7 +140,7 @@ test('real Spring Boot session, catalog saves, QR, registration, restoration, ca
   await user.goto('/notifications')
   await expect(user.getByRole('heading', { name: '부스 입장 호출' })).toBeVisible()
   await user.getByRole('button', { name: '전체 읽음' }).click()
-  await expect(user.getByText('읽지 않은 알림 0개')).toBeVisible()
+  await expect(user.getByText('읽지 않은 알림 0개')).toHaveText('읽지 않은 알림 0개')
   await page.getByRole('button', { name: '입장 완료', exact: true }).click()
   await expect(page.getByText('현재 대기 중인 팀이 없어요.')).toBeVisible()
   await user.goto('/waiting')
