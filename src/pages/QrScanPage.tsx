@@ -6,7 +6,7 @@ import { Button } from '../components/ui'
 import { useBoothApi } from '../hooks/useBoothApi'
 import { errorMessage } from '../apis/axios'
 
-function boothCodeFromQr(value: string) {
+function boothFromQr(value: string) {
   const url = new URL(value, window.location.origin)
   if (
     ![window.location.origin, 'https://kufim-fe.vercel.app'].includes(url.origin) ||
@@ -14,10 +14,12 @@ function boothCodeFromQr(value: string) {
     url.hash
   )
     throw new Error('이 축제의 부스 QR 코드가 아닙니다. 부스에 게시된 QR 코드를 스캔해 주세요.')
-  const match = /^\/w\/([^/]+)\/?$/.exec(url.pathname)
-  if (!match)
-    throw new Error('웨이팅 접수용 QR 코드가 아닙니다. 부스 QR 코드를 다시 확인해 주세요.')
-  return decodeURIComponent(match[1])
+  const code = /^\/w\/([^/]+)\/?$/.exec(url.pathname)
+  if (code) return useBoothApi.findByCode(decodeURIComponent(code[1]))
+  const registration = /^\/waiting\/register\/([1-9]\d*)\/?$/.exec(url.pathname)
+  if (registration && Number.isSafeInteger(Number(registration[1])))
+    return useBoothApi.find(Number(registration[1]))
+  throw new Error('웨이팅 접수용 QR 코드가 아닙니다. 부스 QR 코드를 다시 확인해 주세요.')
 }
 
 function cameraMessage(error: unknown) {
@@ -68,8 +70,7 @@ export default function QrScanPage() {
             scanner?.stop()
             setChecking(true)
             try {
-              const code = boothCodeFromQr(data)
-              const booth = (await useBoothApi.findByCode(code)).data.data
+              const booth = (await boothFromQr(data)).data.data
               if (!disposed) navigate(`/waiting/register/${booth.boothId}`, { replace: true })
             } catch (error) {
               if (!disposed) setScanError(errorMessage(error))
