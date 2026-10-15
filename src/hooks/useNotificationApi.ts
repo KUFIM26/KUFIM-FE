@@ -6,5 +6,8 @@ export const useNotificationApi = {
   read: (id: number) =>
     api.patch<ApiResponse<{ notificationId: number; readAt: string }>>(`/notifications/${id}/read`),
   readAll: () =>
-    api.patch<ApiResponse<{ readCount: number; unreadCount: number }>>('/notifications/read-all'),
+    api.patch<ApiResponse<{ readCount: number; unreadCount: number }>>(
+      '/notifications/read-all',
+      {},
+    ),
 }

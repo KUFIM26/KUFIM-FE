@@ -16,5 +16,9 @@ export const useBoothApi = {
     api.post<ApiResponse<{ boothId: number; boothCode: string; url: string }>>(
       `/admin/booths/${id}/qr`,
     ),
-  qr: (id: number) => api.get<Blob>(`/admin/booths/${id}/qr`, { responseType: 'blob' }),
+  qr: (id: number) =>
+    api.get<Blob>(`/admin/booths/${id}/qr`, {
+      responseType: 'blob',
+      headers: { Accept: 'image/png, application/json' },
+    }),
 }

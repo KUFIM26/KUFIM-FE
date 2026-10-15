@@ -1,6 +1,6 @@
 # KUFIM FE
 
-건국대학교 축제 안내·부스 웨이팅 모바일 웹입니다. React 19, TypeScript, Vite 8, Tailwind CSS 4, React Router 7, Axios를 사용하며 `KUFIM-BE`의 `/api/v1` API에 연결됩니다. 기본 실행은 서버 없이 작동하는 목업 모드입니다. `VITE_USE_MOCK=false`로 실제 API 연결을 사용할 수 있습니다.
+건국대학교 축제 안내·부스 웨이팅 모바일 웹입니다. React 19, TypeScript, Vite 8, Tailwind CSS 4, React Router 7, Axios를 사용하며 `KUFIM-BE`의 `/api/v1` API에 연결됩니다. 기본 실행은 배포된 API 서버 `https://32-236-74-117.sslip.io`에 연결합니다. Swagger 명세의 기존 사용자·관리자 API를 사용하며, `npm run dev:mock`으로 서버 없는 데모를 실행할 수 있습니다.
 
 ## 실행
 
@@ -12,9 +12,9 @@ cp .env.example .env.local
 npm run dev
 ```
 
-### 서버 없이 체험하기 (기본)
+### 서버 없이 체험하기
 
-`npm run dev`만 실행하면 축제, 지도, 부스, 시설, 공연, 공지 샘플 데이터가 표시됩니다. 환경변수가 없어도 목업 모드로 실행되며 상단에 목업 안내가 표시됩니다.
+`npm run dev:mock` 또는 `.env.local`의 `VITE_USE_MOCK=true`로 실행하면 축제, 지도, 부스, 시설, 공연, 공지 샘플 데이터가 표시됩니다. 목업 모드에서는 상단에 안내가 표시됩니다.
 
 - 관리자 계정: **admin / demo1234** (`/admin/login`)
 - 접수 체험: `/w/mock-1` (다른 부스는 `mock-{부스 ID}`), 또는 관리자 부스 설정의 접수 링크
@@ -23,24 +23,32 @@ npm run dev
 - 입력한 학번·전화번호는 저장하지 않습니다. 관리자 연락처 조회에는 샘플 번호가 표시됩니다. 실제 문자 발송과 QR 이미지 생성 대신 접수 링크를 제공합니다.
 - 초기화: 개발자 도구에서 `kufim.mock.v1`과 `kufim.mock.account` 키를 삭제하고 새로고침합니다. 처음 샘플 데이터를 만드는 날부터 2일의 공연 일정이 생성됩니다. 수정하지 않은 기존 3일 샘플 일정은 2일로 자동 변환되며, 직접 편집한 공연 일정은 유지됩니다.
 
-### 실제 서버 연결하기
+### 배포 서버 연결하기 (기본)
 
-`.env.local`에 `VITE_USE_MOCK=false`를 지정하고 FE를 재시작하세요. 배포 빌드도 빌드 **전에** 이 값을 지정해야 실제 서버에 연결됩니다. 서버 오류가 나도 목업 데이터로 자동 전환하지 않습니다.
+저장소의 `.env`에는 공개 연결 설정만 포함합니다. `npm run dev`로 실행하고 `http://localhost:5173`에 접속하세요.
 
-별도 터미널에서 BE를 실행합니다. 처음 관리자 계정을 만들 때만 원하는 개발용 계정을 환경변수로 지정합니다.
-
-```sh
-cd ../KUFIM-BE
-export KUFIM_ADMIN_LOGIN=admin
-export KUFIM_ADMIN_PASSWORD='직접-정한-개발용-비밀번호'
-./gradlew bootRun
+```dotenv
+VITE_USE_MOCK=false
+VITE_API_BASE_URL=/api/v1
+API_PROXY_TARGET=https://32-236-74-117.sslip.io
 ```
 
-- 사용자: http://localhost:5173/
-- 관리자 로그인: http://localhost:5173/admin/login
-- BE Swagger: http://localhost:8080/swagger-ui.html
+- [Swagger UI](https://32-236-74-117.sslip.io/swagger-ui/index.html) · [OpenAPI JSON](https://32-236-74-117.sslip.io/v3/api-docs)
+- 브라우저는 로컬 FE의 `/api/v1`에 요청하며 Vite가 배포 서버로 전달합니다. `/ws`도 동일 서버로 연결합니다.
+- 관리자 로그인은 `/admin/login`에서 실제 서버 계정을 입력합니다. 자격 증명은 저장소나 `VITE_` 환경변수에 넣지 않습니다.
+- 프록시는 같은 FE origin에서 온 요청의 Origin을 대상 서버로 맞추고, 쿠키 Domain을 로컬 호스트에 맞춥니다. 서버의 Secure·HttpOnly·SameSite 설정은 유지합니다. Secure 쿠키를 사용하는 로컬 검증은 `localhost`에서 실행합니다.
+- 서버에 등록된 축제·부스·공연·공지만 표시합니다. 빈 목록이나 API 오류를 목업 데이터로 대체하지 않습니다.
+- 혼잡도 입력과 CSV 다운로드는 이번 연결 범위에서 제외합니다.
 
-새 DB에는 콘텐츠가 없습니다. Swagger에서 관리자 로그인 후 축제 → 지도 도면(위치 지정 시 필요) → 무대를 먼저 등록하세요. 이후 FE 관리자 화면에서 공지, 공연, 부스, 시설을 등록할 수 있습니다. 부스 등록 시 **웨이팅 접수 사용**을 켜면 웨이팅 운영 목록에 표시됩니다. 기존 관리자 계정의 비밀번호는 환경변수로 덮어쓰지 않습니다.
+다른 설정이 필요하면 `.env.local`에서 덮어쓰고 개발 서버를 재시작하세요. 로컬 BE를 사용할 때는 `API_PROXY_TARGET=http://127.0.0.1:8080`으로 바꾸면 됩니다. 백엔드 코드를 수정할 필요는 없습니다.
+
+### 배포 서버 검증
+
+```sh
+npm run test:remote
+```
+
+배포 서버의 공개 화면과 실제 STOMP 연결을 검사합니다. 관리자 테스트는 `KUFIM_TEST_ADMIN_LOGIN`, `KUFIM_TEST_ADMIN_PASSWORD`가 실행 환경에 있을 때만 수행합니다. 관리자 검증은 로그인·세션 복원·목록·QR 조회·로그아웃만 수행하며, 축제 콘텐츠나 웨이팅 데이터를 생성·변경하지 않습니다. 인증 정보가 남지 않도록 이 테스트의 trace는 저장하지 않습니다.
 
 ## 요청한 폴더 구조
 
@@ -91,7 +99,7 @@ await useNoticeApi.make({
 
 ## 주소와 인증
 
-`.env.local`의 `VITE_API_BASE_URL`이 Axios 기본 주소입니다. 기본값은 `/api/v1`이며 Vite가 `/api`·`/ws` 요청을 `API_PROXY_TARGET`(기본 `http://127.0.0.1:8080`)으로 전달합니다. 환경변수를 바꾼 뒤에는 Vite를 재시작하세요.
+`.env.local`의 `VITE_API_BASE_URL`이 Axios 기본 주소입니다. 기본값은 `/api/v1`이며 Vite가 `/api`·`/ws` 요청을 `API_PROXY_TARGET`(기본 `https://32-236-74-117.sslip.io`)으로 전달합니다. 환경변수를 바꾼 뒤에는 Vite를 재시작하세요.
 
 - 관리자: `KUFIMSESSION` HttpOnly 쿠키와 `XSRF-TOKEN` → `X-XSRF-TOKEN` 헤더. Bearer accessToken은 사용하지 않습니다.
 - 방문자: UUID v4를 `localStorage['kufim.clientToken']`에 유지하고 `X-Client-Token` 헤더로 보냅니다. 학번·전화번호는 localStorage에 저장하지 않습니다.
