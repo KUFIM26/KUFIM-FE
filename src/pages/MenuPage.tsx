@@ -64,19 +64,7 @@ export default function MenuPage({ admin = false }: { admin?: boolean }) {
             </p>
           </div>
         </Card>
-        {admin && (
-          <>
-            <p className="text-sm">{auth.account?.name}님</p>
-            <button
-              className="text-sm text-brand underline"
-              disabled={action.pending}
-              onClick={() => void action.run(auth.logout)}
-            >
-              로그아웃
-            </button>
-            <RequestState error={action.error} />
-          </>
-        )}
+
         {sections
           .filter((section) => section.items.length)
           .map((section) => (
@@ -96,6 +84,19 @@ export default function MenuPage({ admin = false }: { admin?: boolean }) {
               </Card>
             </section>
           ))}
+        {admin && (
+          <>
+            <p className="text-sm">{auth.account?.name}님</p>
+            <button
+              className="text-sm text-brand underline"
+              disabled={action.pending}
+              onClick={() => void action.run(auth.logout)}
+            >
+              로그아웃
+            </button>
+            <RequestState error={action.error} />
+          </>
+        )}
       </div>
     </Page>
   )
