@@ -132,6 +132,8 @@ npm run test:integration
 
 ## 배포
 
-`npm run build` 결과는 `dist/`입니다. 운영 환경도 **FE와 같은 origin의 `/api`·`/ws` reverse proxy**를 사용하고 `/ws`의 WebSocket Upgrade를 지원해야 합니다. 정적 호스팅에서 `/ws`를 전달할 수 없다면 실시간 연결 없이 폴링으로 동작합니다. 현재 `vercel.json`은 SPA fallback만 설정하므로 배포 전에 실제 BE 주소로 `/api/:path*` 전달 규칙을 SPA fallback보다 앞에 추가해야 합니다. 운영 BE 주소가 정해지지 않아 임의의 외부 주소를 넣지는 않았습니다.
+`npm run build` 결과는 `dist/`입니다. `vercel.json`은 `/api/:path*`를 `https://32-236-74-117.sslip.io/api/:path*`로 전달한 뒤 나머지 URL에 SPA fallback을 적용합니다. API 응답은 캐시하지 않습니다. 수정된 설정은 새 배포에 반영해야 합니다.
 
-별도 origin의 절대 API 주소를 사용할 경우 BE CORS·세션 쿠키·CSRF 쿠키 접근 구성을 함께 맞춰야 합니다. API 호스트 전용 쿠키를 FE가 읽을 수 없는 배포에서는 `withCredentials`만 설정해도 CSRF 헤더가 생기지는 않습니다. 기본 same-origin proxy 구성을 사용하면 이를 피할 수 있습니다. 운영 QR의 `FRONTEND_BASE_URL`도 실제 FE 주소로 설정하세요.
+Vercel 빌드는 `VITE_REALTIME_ENABLED=false`로 실행합니다. 현재 정적 배포에는 `/ws` 처리 경로가 없으므로 WebSocket 연결을 시도하지 않고 기존 REST 폴링으로 갱신합니다. 로컬 개발과 같은 origin의 WebSocket 프록시가 있는 환경에서는 기본 실시간 연결을 유지합니다. `VITE_REALTIME_ENABLED=true`로 켜려면 실제 `/ws` 처리 경로와 인증 전달 구성이 먼저 필요합니다.
+
+현재 BE는 `Origin: https://kufim-fe.vercel.app` 요청을 403으로 거부하므로 관리자 로그인·저장 같은 브라우저 요청을 위해 해당 origin을 BE의 CORS 허용 목록에 추가해야 합니다. 프런트 배포 설정만으로 이 백엔드 정책을 변경하지 않습니다. 요청할 내용은 [백엔드 설정 요청](docs/backend-request.md)에 정리했습니다. 관리자 세션·CSRF 쿠키와 `X-Client-Token`·`Idempotency-Key` 전달은 기존 방식을 유지합니다.

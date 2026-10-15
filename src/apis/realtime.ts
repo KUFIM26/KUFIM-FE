@@ -3,6 +3,9 @@ import { Client } from '@stomp/stompjs'
 import type { StompSubscription } from '@stomp/stompjs'
 import { getClientToken } from './axios'
 
+// Vercel's static deployment uses REST polling until a WebSocket route is configured.
+export const realtimeEnabled = import.meta.env.VITE_REALTIME_ENABLED !== 'false'
+
 type Entry = { listeners: Set<() => void>; subscription?: StompSubscription }
 const entries = new Map<string, Entry>()
 const stateListeners = new Set<() => void>()
@@ -23,7 +26,7 @@ function attach(destination: string, entry: Entry) {
 }
 function ensureClient() {
   window.clearTimeout(idleTimer)
-  if (client) return
+  if (client || !realtimeEnabled) return
   // VITE_API_BASE_URL includes /api/v1; the broker is /ws on that origin.
   const url = new URL(import.meta.env.VITE_API_BASE_URL || '/api/v1', window.location.href)
   url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:'
@@ -105,6 +108,7 @@ export function useTopics(destinations: string[], onChange: () => void) {
   })
   const key = JSON.stringify([...new Set(destinations)].sort())
   useEffect(() => {
+    if (!realtimeEnabled) return
     const releases = (JSON.parse(key) as string[]).map((destination) =>
       subscribe(destination, () => handler.current()),
     )

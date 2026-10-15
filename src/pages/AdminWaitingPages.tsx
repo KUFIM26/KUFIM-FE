@@ -1,6 +1,6 @@
 import axios from 'axios'
 import { useAuth } from '../app/auth-context'
-import { pollEvery, useRealtimeConnected, useTopic } from '../apis/realtime'
+import { pollEvery, realtimeEnabled, useRealtimeConnected, useTopic } from '../apis/realtime'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
@@ -104,7 +104,11 @@ export function AdminQueuePage() {
           </p>
         )}
         <p role="status" className="text-xs text-muted">
-          {live ? '실시간 연결됨' : '실시간 연결 대기 · 주기적으로 갱신 중'}
+          {live
+            ? '실시간 연결됨'
+            : realtimeEnabled
+              ? '실시간 연결 대기 · 주기적으로 갱신 중'
+              : '주기적으로 갱신 중'}
         </p>
         <SectionTitle>대기 명단</SectionTitle>
         {queue && !items.length && <EmptyState>현재 대기 중인 팀이 없어요.</EmptyState>}
