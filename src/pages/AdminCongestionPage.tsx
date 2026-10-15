@@ -176,7 +176,10 @@ export default function AdminCongestionPage() {
                     type="button"
                     aria-pressed={draft.level === level.value}
                     onClick={() => update(zone, { level: level.value })}
-                    style={{ backgroundColor: level.color }}
+                    style={{
+                      backgroundColor:
+                        draft.level && draft.level !== level.value ? '#CFCFCF' : level.color,
+                    }}
                     className={`h-[60px] rounded-xl text-xl font-bold text-[#161616] shadow-[1px_1px_.5px_#0000001a] ${draft.level === level.value ? 'ring-2 ring-brand ring-offset-2' : ''}`}
                   >
                     {level.label}
