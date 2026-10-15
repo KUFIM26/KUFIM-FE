@@ -96,6 +96,8 @@ export async function mockApi(
     status: 'OPEN' as AcceptingStatus,
     minutes: 5,
     failSave: false,
+    qrIssued: true,
+    qrIssues: 0,
     failRegisterOnce: false,
     keys: [] as string[],
     tokens: [] as string[],
@@ -119,6 +121,7 @@ export async function mockApi(
     route.fulfill({ status, json: { success: true, data, error: null } })
   const fail = (route: Route, status: number, message: string, code = 'C001') =>
     route.fulfill({ status, json: { success: false, data: null, error: { code, message } } })
+  await page.routeWebSocket('**/ws', () => {})
   await page.route('**/api/v1/**', async (route) => {
     const request = route.request()
     const path = new URL(request.url()).pathname.replace('/api/v1', '')
@@ -268,7 +271,13 @@ export async function mockApi(
         autoCancelMinutes: 10,
       })
     }
-    if (path === '/admin/booths/7/qr')
+    if (path === '/admin/booths/7/qr') {
+      if (method === 'POST') {
+        state.qrIssued = true
+        state.qrIssues++
+        return ok(route, { boothId: 7, boothCode: 'live-code', url: '/w/live-code' })
+      }
+      if (!state.qrIssued) return fail(route, 404, '발급된 QR 코드가 없습니다.', 'B002')
       return route.fulfill({
         contentType: 'image/png',
         body: Buffer.from(
@@ -276,6 +285,7 @@ export async function mockApi(
           'base64',
         ),
       })
+    }
     if (path.startsWith(`/admin/waitings/${ticket.waitingId}/`)) {
       const op = path.split('/').pop()
       if (op === 'contact') return ok(route, { phoneNumber: '01012341234' })

@@ -79,6 +79,8 @@ export function boothView(b: BoothDto): Booth {
     hours: b.operatingHours || '',
     description: b.description || '',
     waitingEnabled: b.waitingEnabled,
+    teams: b.waitingEnabled ? (b.waitingTeamCount ?? undefined) : undefined,
+    minutes: b.waitingEnabled ? (b.estimatedWaitMinutes ?? undefined) : undefined,
     waitingStatus: b.waitingStatus || b.acceptingStatus,
     position: b.pin ? { x: b.pin.xPercent, y: b.pin.yPercent } : undefined,
   }

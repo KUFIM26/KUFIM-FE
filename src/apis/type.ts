@@ -42,6 +42,8 @@ export type BoothDto = {
   operatingHours: string | null
   description?: string | null
   waitingEnabled: boolean
+  waitingTeamCount?: number | null
+  estimatedWaitMinutes?: number | null
   waitingStatus?: AcceptingStatus | 'DISABLED'
   acceptingStatus?: AcceptingStatus
   pin: Pin | null

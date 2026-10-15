@@ -12,5 +12,9 @@ export const useBoothApi = {
   update: (id: number, data: BoothInput) =>
     api.patch<ApiResponse<BoothDto>>(`/admin/booths/${id}`, data),
   delete: (id: number) => api.delete<void>(`/admin/booths/${id}`),
+  issueQr: (id: number) =>
+    api.post<ApiResponse<{ boothId: number; boothCode: string; url: string }>>(
+      `/admin/booths/${id}/qr`,
+    ),
   qr: (id: number) => api.get<Blob>(`/admin/booths/${id}/qr`, { responseType: 'blob' }),
 }

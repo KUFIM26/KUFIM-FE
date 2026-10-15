@@ -1,3 +1,6 @@
+import axios from 'axios'
+import { useAuth } from '../app/auth-context'
+import { pollEvery, useRealtimeConnected, useTopic } from '../apis/realtime'
 import { isMockMode } from '../apis/mode'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
@@ -11,7 +14,7 @@ import { useAction, useResource } from '../hooks/useResource'
 import { useWaitingApi } from '../hooks/useWaitingApi'
 import { useBoothApi } from '../hooks/useBoothApi'
 import { acceptingLabels, dateText, waitingLabels } from '../apis/adapters'
-import type { AcceptingStatus, QueueItem, WaitingConfig } from '../apis/type'
+import type { AcceptingStatus, QueueItem, WaitingConfig, ApiResponse } from '../apis/type'
 import { NotFoundPage } from './UtilityPages'
 
 export function AdminWaitingListPage() {
@@ -45,7 +48,9 @@ export function AdminQueuePage() {
     async () => (await useWaitingApi.queue(Number(boothId))).data.data,
     [boothId],
   )
-  const resource = useResource(loader, 5000)
+  const connected = useRealtimeConnected()
+  const resource = useResource(loader, pollEvery(connected, 5000))
+  const live = useTopic(`/topic/admin/booth/${boothId}/waiting`, resource.refresh)
   const [cancel, setCancel] = useState<QueueItem | null>(null)
   const [contact, setContact] = useState<{ id: string; phone: string } | null>(null)
   const [message, setMessage] = useState('')
@@ -97,6 +102,11 @@ export function AdminQueuePage() {
         {message && (
           <p role="status" className="text-sm text-brand">
             {message}
+          </p>
+        )}
+        {!isMockMode && (
+          <p role="status" className="text-xs text-muted">
+            {live ? '실시간 연결됨' : '실시간 연결 대기 · 주기적으로 갱신 중'}
           </p>
         )}
         <SectionTitle>대기 명단</SectionTitle>
@@ -233,14 +243,25 @@ function SettingsForm({
 }) {
   const [status, setStatus] = useState<AcceptingStatus>(initial.acceptingStatus)
   const [qrUrl, setQrUrl] = useState('')
+  const { account } = useAuth()
+  const qrAction = useAction()
   const { refresh } = useFestival()
   const action = useAction()
   const navigate = useNavigate()
   const back = `/admin/waiting/${boothId}`
-  const qrLoader = useCallback(
-    async () => (isMockMode ? null : (await useBoothApi.qr(boothId)).data),
-    [boothId],
-  )
+  const qrLoader = useCallback(async () => {
+    if (isMockMode) return null
+    try {
+      return (await useBoothApi.qr(boothId)).data
+    } catch (error) {
+      if (
+        axios.isAxiosError<ApiResponse<unknown>>(error) &&
+        error.response?.data?.error?.code === 'B002'
+      )
+        return null
+      throw error
+    }
+  }, [boothId])
   const qr = useResource(qrLoader)
   useEffect(() => {
     if (!qr.data) return
@@ -308,6 +329,27 @@ function SettingsForm({
           </Card>
         )}
         <RequestState loading={qr.loading} error={qr.error} retry={() => void qr.refresh()} />
+        {!isMockMode && !qr.loading && !qr.error && qr.data === null && (
+          <Card className="flex flex-col gap-3 p-4">
+            <p className="text-sm">아직 발급된 QR 코드가 없습니다.</p>
+            {account?.role === 'SUPER_ADMIN' ? (
+              <Button
+                disabled={qrAction.pending}
+                onClick={() =>
+                  void qrAction.run(async () => {
+                    await useBoothApi.issueQr(boothId)
+                    await qr.refresh()
+                  })
+                }
+              >
+                {qrAction.pending ? '발급 중…' : 'QR 코드 발급하기'}
+              </Button>
+            ) : (
+              <p className="text-xs text-muted">총괄 관리자에게 QR 발급을 요청해주세요.</p>
+            )}
+          </Card>
+        )}
+        <RequestState error={qrAction.error} />
         {qrUrl && (
           <Card className="flex flex-col items-center gap-4 p-5">
             <img src={qrUrl} alt={`${name} 웨이팅 접수 QR 코드`} className="h-52 w-52" />

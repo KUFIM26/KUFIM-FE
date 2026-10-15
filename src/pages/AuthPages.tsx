@@ -1,5 +1,5 @@
 import { isMockMode } from '../apis/mode'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../app/auth-context'
 import { FestivalProvider } from '../app/FestivalProvider'
@@ -8,8 +8,9 @@ import { Button } from '../components/ui'
 import { RequestState } from '../components/RequestState'
 import { useAction } from '../hooks/useResource'
 export function AdminGuard() {
-  const { account, loading, error, refresh } = useAuth()
+  const { account, loading, error, ensure, refresh } = useAuth()
   const location = useLocation()
+  useEffect(ensure, [ensure])
   if (loading || error)
     return <RequestState loading={loading} error={error} retry={() => void refresh()} />
   if (!account)
@@ -33,6 +34,8 @@ export function AdminGuard() {
 }
 export function LoginPage() {
   const auth = useAuth()
+  const { ensure } = auth
+  useEffect(ensure, [ensure])
   const [loginId, setLoginId] = useState('')
   const [password, setPassword] = useState('')
   const action = useAction()

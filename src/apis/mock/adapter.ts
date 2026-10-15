@@ -449,6 +449,19 @@ export const mockAdapter: AxiosAdapter = async (config) => {
       if (config.params?.limit) list = list.slice(0, Number(config.params.limit))
       if (resource === 'performances')
         list = [...list].sort((a, b) => String(a.startAt).localeCompare(String(b.startAt)))
+      if (resource === 'booths')
+        list = list.map((booth) => {
+          const count = queue(Number(booth.boothId)).filter(
+            (ticket) => ticket.status === 'WAITING',
+          ).length
+          return {
+            ...booth,
+            waitingTeamCount: booth.waitingEnabled ? count : null,
+            estimatedWaitMinutes: booth.waitingEnabled
+              ? count * settings(Number(booth.boothId)).estimateMinutesPerTeam
+              : null,
+          }
+        })
       return response(list)
     }
     if (!contentRoute[1]) return fail(403, '관리자 요청이 필요합니다.')

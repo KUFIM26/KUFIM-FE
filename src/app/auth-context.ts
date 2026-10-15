@@ -4,6 +4,7 @@ export type AuthState = {
   account: Account | null
   loading: boolean
   error: string
+  ensure: () => void
   refresh: () => Promise<void>
   login: (loginId: string, password: string) => Promise<void>
   logout: () => Promise<void>

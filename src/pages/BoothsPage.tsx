@@ -1,6 +1,7 @@
 import { useCallback } from 'react'
 import { useBoothApi } from '../hooks/useBoothApi'
 import { useFacilityApi } from '../hooks/useFacilityApi'
+import { pollEvery, useRealtimeConnected, useTopic } from '../apis/realtime'
 import { useResource } from '../hooks/useResource'
 import { RequestState } from '../components/RequestState'
 import { boothView, facilityView } from '../apis/adapters'
@@ -89,7 +90,10 @@ export function BoothDetailPage() {
         : {}),
     }
   }, [id])
-  const resource = useResource(loader)
+  const connected = useRealtimeConnected()
+  const facility = id?.startsWith('facility-')
+  const resource = useResource(loader, facility ? 0 : pollEvery(connected, 15000))
+  useTopic(id && !facility ? `/topic/booth/${id}/waiting` : null, resource.refresh)
   const booth = resource.data
   if (!booth)
     return (

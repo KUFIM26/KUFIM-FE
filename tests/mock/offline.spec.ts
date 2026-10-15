@@ -31,7 +31,7 @@ test('programs keep two days and switch schedules on visitor and admin screens',
   await day2.click()
   await expect(page.getByRole('link', { name: /어쿠스틱 콘서트/ })).toBeVisible()
   await expect(page.getByRole('link', { name: /학생 가요제/ })).toBeVisible()
-  await page.getByRole('button', { name: '일감호 무대', exact: true }).click()
+  await page.getByRole('button', { name: '황소상 무대', exact: true }).click()
   await expect(page.getByRole('link', { name: /축제 피날레/ })).toBeVisible()
   await page.reload()
   await expect(day2).toHaveAttribute('aria-pressed', 'true')

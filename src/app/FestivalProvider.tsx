@@ -6,6 +6,7 @@ import { useBoothApi } from '../hooks/useBoothApi'
 import { useFacilityApi } from '../hooks/useFacilityApi'
 import { usePerformanceApi } from '../hooks/usePerformanceApi'
 import { useNoticeApi } from '../hooks/useNoticeApi'
+import { pollEvery, useRealtimeConnected, useTopic, useTopics } from '../apis/realtime'
 import { isNotFound } from '../apis/axios'
 import { boothView, facilityView, noticeView, performanceView } from '../apis/adapters'
 import { RequestState } from '../components/RequestState'
@@ -22,52 +23,76 @@ export function FestivalProvider({
   const { account } = useAuth()
   const superAdmin = admin && account?.role === 'SUPER_ADMIN'
   const loader = useCallback(async () => {
-    const [festival, stageRes, map, pinRes, boothRes, facilityRes, performanceRes, noticeRes] =
-      await Promise.all([
-        useFestivalApi
-          .find()
-          .then((r) => r.data.data)
-          .catch((e) => {
-            if (isNotFound(e)) return null
-            throw e
-          }),
-        useFestivalApi.stages(),
-        useFestivalApi
-          .map()
-          .then((r) => r.data.data.floorplan)
-          .catch((e) => {
-            if (isNotFound(e)) return null
-            throw e
-          }),
-        useFestivalApi.pins(),
-        admin ? useBoothApi.adminFindAll() : useBoothApi.findAll(),
-        superAdmin ? useFacilityApi.adminFindAll() : useFacilityApi.findAll(),
-        superAdmin ? usePerformanceApi.adminFindAll() : usePerformanceApi.findAll(),
-        useNoticeApi.findAll(),
-      ])
+    const [festival, stageRes, map, pinRes, facilityRes, performanceRes] = await Promise.all([
+      useFestivalApi
+        .find()
+        .then((r) => r.data.data)
+        .catch((e) => {
+          if (isNotFound(e)) return null
+          throw e
+        }),
+      useFestivalApi.stages(),
+      useFestivalApi
+        .map()
+        .then((r) => r.data.data.floorplan)
+        .catch((e) => {
+          if (isNotFound(e)) return null
+          throw e
+        }),
+      useFestivalApi.pins(),
+      superAdmin ? useFacilityApi.adminFindAll() : useFacilityApi.findAll(),
+      superAdmin ? usePerformanceApi.adminFindAll() : usePerformanceApi.findAll(),
+    ])
     const stages = stageRes.data.data
     return {
       festival,
       stages,
       floorplan: map,
       pins: pinRes.data.data,
-      booths: [...boothRes.data.data.map(boothView), ...facilityRes.data.data.map(facilityView)],
+      facilities: facilityRes.data.data.map(facilityView),
       performances: performanceRes.data.data.map((p) => performanceView(p, stages)),
-      notices: noticeRes.data.data.map(noticeView),
     }
-  }, [admin, superAdmin])
+  }, [superAdmin])
+  const live = useRealtimeConnected()
   const resource = useResource(loader)
-  if (!resource.data)
-    return (
-      <RequestState
-        loading={resource.loading}
-        error={resource.error}
-        retry={() => void resource.refresh()}
-      />
-    )
+  const boothLoader = useCallback(
+    async () =>
+      (await (admin ? useBoothApi.adminFindAll() : useBoothApi.findAll())).data.data.map(boothView),
+    [admin],
+  )
+  const noticeLoader = useCallback(
+    async () => (await useNoticeApi.findAll()).data.data.map(noticeView),
+    [],
+  )
+  const boothResource = useResource(boothLoader, pollEvery(live, 15000))
+  const noticeResource = useResource(noticeLoader, pollEvery(live, 15000))
+  useTopics(
+    (boothResource.data ?? [])
+      .filter((b) => b.waitingEnabled)
+      .map((b) => `/topic/booth/${b.id}/waiting`),
+    boothResource.refresh,
+  )
+  useTopic('/topic/notice', noticeResource.refresh)
+  const { refresh: refreshCatalog } = resource
+  const { refresh: refreshBooths } = boothResource
+  const { refresh: refreshNotices } = noticeResource
+  const refresh = useCallback(async () => {
+    await Promise.all([refreshCatalog(), refreshBooths(), refreshNotices()])
+  }, [refreshCatalog, refreshBooths, refreshNotices])
+  const error = resource.error || boothResource.error || noticeResource.error
+  const loading = resource.loading || boothResource.loading || noticeResource.loading
+  if (!resource.data || !boothResource.data || !noticeResource.data)
+    return <RequestState loading={loading} error={error} retry={() => void refresh()} />
   return (
-    <FestivalContext.Provider value={{ ...resource.data, refresh: resource.refresh }}>
-      <RequestState error={resource.error} retry={() => void resource.refresh()} />
+    <FestivalContext.Provider
+      value={{
+        ...resource.data,
+        booths: [...boothResource.data, ...resource.data.facilities],
+        notices: noticeResource.data,
+        refresh,
+      }}
+    >
+      <RequestState error={error} retry={() => void refresh()} />
       {children}
     </FestivalContext.Provider>
   )

@@ -139,7 +139,7 @@ export function PerformanceFilters({
   )
 }
 export function WaitingNumbers({ booth }: { booth: Booth }) {
-  if (booth.teams === undefined) return null
+  if (booth.teams === undefined || booth.minutes === undefined) return null
   return (
     <div className="flex w-[90px] shrink-0 flex-col items-center gap-1">
       <span className="text-xs font-medium">대기현황</span>

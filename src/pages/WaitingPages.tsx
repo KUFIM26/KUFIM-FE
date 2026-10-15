@@ -9,6 +9,7 @@ import { RequestState } from '../components/RequestState'
 import { figmaAssets as assets } from '../data/figma-assets'
 import { useBoothApi } from '../hooks/useBoothApi'
 import { useWaitingApi } from '../hooks/useWaitingApi'
+import { pollEvery, useRealtimeConnected, useTopic } from '../apis/realtime'
 import { useAction, useResource } from '../hooks/useResource'
 import { boothView, dateText, waitingLabels } from '../apis/adapters'
 import type { Booth } from '../data/models'
@@ -30,7 +31,8 @@ export function WaitingInstructions() {
 }
 export function WaitingPage() {
   const loader = useCallback(async () => (await useWaitingApi.mine()).data.data, [])
-  const resource = useResource(loader, 5000)
+  const connected = useRealtimeConnected()
+  const resource = useResource(loader, pollEvery(connected, 5000))
   const popularLoader = useCallback(
     async () =>
       (await useBoothApi.findAll({ sort: 'popular', limit: 3, waitingOnly: true })).data.data.map(
@@ -40,6 +42,8 @@ export function WaitingPage() {
   )
   const popular = useResource(popularLoader)
   const active = resource.data?.find((t) => t.status === 'WAITING' || t.status === 'CALLED')
+  useTopic(active ? `/topic/waiting/${active.waitingId}` : null, resource.refresh)
+  useTopic(active ? `/topic/booth/${active.boothId}/waiting` : null, resource.refresh)
   const [cancelOpen, setCancelOpen] = useState(false)
   const action = useAction()
   return (
@@ -174,7 +178,9 @@ export function WaitingRegisterPage() {
       ticket: mine.data.data.find((t) => t.status === 'WAITING' || t.status === 'CALLED') || null,
     }
   }, [boothId])
-  const resource = useResource(loader)
+  const connected = useRealtimeConnected()
+  const resource = useResource(loader, pollEvery(connected, 15000))
+  useTopic(`/topic/booth/${boothId}/waiting`, resource.refresh)
   if (!resource.data)
     return (
       <Page title="QR 웨이팅" back="/waiting">

@@ -65,7 +65,10 @@ test('real Spring Boot session, catalog saves, QR, registration, restoration, ca
   const performances = await page.request.get('/api/v1/performances')
   const performance = (await performances.json()).data[0]
   expect(performance.stageId).toBe(stage.stageId)
-  expect(performance.description).toBe('공연 저장 검증')
+  const performanceDetail = await page.request.get(
+    `/api/v1/performances/${performance.performanceId}`,
+  )
+  expect((await performanceDetail.json()).data.description).toBe('공연 저장 검증')
   await page.goto(`/admin/booths/${booth.boothId}/edit`)
   await expect(page.getByRole('textbox', { name: '부스 소개', exact: true })).toHaveValue(
     '실제 DB의 부스',
@@ -90,6 +93,7 @@ test('real Spring Boot session, catalog saves, QR, registration, restoration, ca
   await expect(page.getByRole('link', { name: '테스트 상황실 위치', exact: true })).toBeVisible()
   await page.screenshot({ path: testInfo.outputPath('map.png'), fullPage: true })
   await page.goto(`/admin/waiting/${booth.boothId}/settings`)
+  await expect(page.getByRole('button', { name: 'QR 코드 발급하기', exact: true })).toHaveCount(0)
   await expect(page.getByAltText(/웨이팅 접수 QR 코드/)).toBeVisible()
   expect(
     await page
@@ -105,6 +109,12 @@ test('real Spring Boot session, catalog saves, QR, registration, restoration, ca
     viewport: { width: 393, height: 898 },
   })
   const user = await visitor.newPage()
+  let personalSubscribed = false
+  user.on('websocket', (socket) =>
+    socket.on('framesent', (event) => {
+      if (String(event.payload).includes('destination:/topic/waiting/')) personalSubscribed = true
+    }),
+  )
   user.on('pageerror', (e) => errors.push(e.message))
   await user.goto(new URL(qr.url).pathname)
   await expect(user).toHaveURL(new RegExp(`/waiting/register/${booth.boothId}$`))
@@ -118,10 +128,12 @@ test('real Spring Boot session, catalog saves, QR, registration, restoration, ca
   await user.reload()
   await expect(user.getByText('1번', { exact: true })).toBeVisible()
   await page.reload()
+  await expect(page.getByText('실시간 연결됨', { exact: true })).toBeVisible()
+  await expect.poll(() => personalSubscribed).toBe(true)
   await page.getByRole('button', { name: '호출하기', exact: true }).click()
   await expect(page.getByRole('button', { name: '재호출', exact: true })).toBeVisible()
   await expect(user.getByRole('heading', { name: '호출됨', exact: true })).toBeVisible({
-    timeout: 12000,
+    timeout: 3000,
   })
   await page.screenshot({ path: testInfo.outputPath('admin-called.png'), fullPage: true })
   await user.screenshot({ path: testInfo.outputPath('visitor-called.png'), fullPage: true })

@@ -48,10 +48,18 @@ api.interceptors.response.use(
     }
     return response
   },
-  (error: unknown) => {
+  async (error: unknown) => {
+    // QR downloads request blobs; error envelopes must still be readable.
+    if (axios.isAxiosError(error) && error.response?.data instanceof Blob) {
+      try {
+        error.response.data = JSON.parse(await error.response.data.text())
+      } catch {
+        // Preserve non-JSON errors for the generic error message.
+      }
+    }
     if (
       axios.isAxiosError(error) &&
-      error.response?.status === 401 &&
+      (error.response?.status === 401 || error.response?.data?.error?.code === 'A005') &&
       error.config?.url?.startsWith('/admin/') &&
       error.config.url !== '/admin/auth/login' &&
       error.config.url !== '/admin/auth/me'
