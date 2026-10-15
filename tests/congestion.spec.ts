@@ -126,3 +126,66 @@ test('Figma screen fits mobile widths and uses local assets', async ({ page }) =
   const back = page.locator('header img')
   await expect(back).toHaveJSProperty('naturalWidth', 8)
 })
+
+test('home shows only the first stage congestion and refreshes without reloading', async ({
+  page,
+}) => {
+  await mockApi(page)
+  let level: string | null = 'SMOOTH'
+  let reads = 0
+  await page.route('**/api/v1/stages', (route) => {
+    reads++
+    return route.fulfill({
+      json: {
+        success: true,
+        error: null,
+        data: [
+          {
+            stageId: 4,
+            name: '서브 무대',
+            displayOrder: 2,
+            entryStatus: 'RESTRICTED',
+            zones: [{ zoneId: 2, displayOrder: 1, level: 'VERY_CROWDED' }],
+          },
+          {
+            stageId: 3,
+            name: '메인 무대',
+            displayOrder: 1,
+            entryStatus: 'OPEN',
+            zones: [{ zoneId: 1, displayOrder: 1, level }],
+          },
+        ],
+      },
+    })
+  })
+  await page.clock.install()
+  await page.goto('/')
+  const status = page.getByText('무대 혼잡도', { exact: true }).locator('..').locator('strong')
+  await expect(status).toHaveText('원활')
+  const before = reads
+  level = 'CROWDED'
+  await page.clock.fastForward(15000)
+  await expect(status).toHaveText('혼잡')
+  expect(reads).toBeGreaterThan(before)
+  level = null
+  await page.clock.fastForward(15000)
+  await expect(status).toHaveText('정보 없음')
+})
+
+test('only selected congestion keeps its color and saved selection restores after reload', async ({
+  page,
+}) => {
+  await setup(page)
+  await page.goto('/admin/congestion')
+  const smooth = page.getByRole('button', { name: '원활', exact: true })
+  const crowded = page.getByRole('button', { name: '혼잡', exact: true })
+  await expect(smooth).toHaveCSS('background-color', 'rgb(158, 199, 233)')
+  await crowded.click()
+  await expect(smooth).toHaveCSS('background-color', 'rgb(207, 207, 207)')
+  await expect(crowded).toHaveCSS('background-color', 'rgb(255, 216, 165)')
+  await page.getByRole('button', { name: '저장하기' }).click()
+  await expect(page.getByText('혼잡도를 저장했습니다.')).toBeVisible()
+  await page.reload()
+  await expect(smooth).toHaveCSS('background-color', 'rgb(207, 207, 207)')
+  await expect(crowded).toHaveCSS('background-color', 'rgb(255, 216, 165)')
+})

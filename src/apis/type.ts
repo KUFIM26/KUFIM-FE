@@ -31,6 +31,13 @@ export type Stage = {
   name: string
   entryStatus: 'OPEN' | 'RESTRICTED'
   displayOrder: number
+  zones?: {
+    zoneId: number
+    displayOrder: number
+    level: 'SMOOTH' | 'NORMAL' | 'CROWDED' | 'VERY_CROWDED' | null
+    estimatedPeople: number | null
+    updatedAt: string | null
+  }[]
 }
 export type BoothDto = {
   boothId: number

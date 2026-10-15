@@ -1,18 +1,39 @@
 import { seoulDate } from '../apis/adapters'
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useFestival } from '../app/festival-context'
 import { Page } from '../components/layout'
 import { Asset, EmptyState, SectionTitle } from '../components/ui'
 import { EmergencyBanner, FestivalMeta, ScheduleList, Stats } from '../components/festival'
 import { figmaAssets as assets } from '../data/figma-assets'
+import { useFestivalApi } from '../hooks/useFestivalApi'
+import { useResource } from '../hooks/useResource'
+import { pollEvery, useRealtimeConnected, useTopic } from '../apis/realtime'
+import { RequestState } from '../components/RequestState'
+
+const congestionLabels = {
+  SMOOTH: '원활',
+  NORMAL: '보통',
+  CROWDED: '혼잡',
+  VERY_CROWDED: '매우 혼잡',
+}
 
 export default function HomePage() {
   const [showNotice, setShowNotice] = useState(true)
   const { performances, notices, festival, stages } = useFestival()
+  const stageLoader = useCallback(async () => (await useFestivalApi.stages()).data.data, [])
+  const live = useRealtimeConnected()
+  const stageResource = useResource(stageLoader, pollEvery(live, 15000))
+  useTopic('/topic/congestion', stageResource.refresh)
+  const primaryStage = [...(stageResource.data ?? stages)].sort(
+    (a, b) => a.displayOrder - b.displayOrder,
+  )[0]
+  const primaryZone = [...(primaryStage?.zones ?? [])].sort(
+    (a, b) => a.displayOrder - b.displayOrder,
+  )[0]
   const a = assets['17:303']
   const currentPerformances = performances.filter((performance) => performance.status === 'now')
-  const primaryStageId = stages[0]?.stageId
+  const primaryStageId = primaryStage?.stageId
   const today = seoulDate(festival?.serverTime || new Date().toISOString())
   const shortcuts = [
     { to: '/map', label: '축제 지도', icon: a.imgVector3 },
@@ -37,16 +58,13 @@ export default function HomePage() {
               { label: '현재 운영 부스', value: `${festival?.summary.operatingBoothCount ?? 0}개` },
               { label: '오늘의 공연', value: `${festival?.summary.todayPerformanceCount ?? 0}건` },
               {
-                label: '무대 입장 현황',
-                value: !festival?.summary.stageEntrySummary.length
-                  ? '정보 없음'
-                  : festival.summary.stageEntrySummary.some((s) => s.entryStatus === 'RESTRICTED')
-                    ? '일부 제한'
-                    : '입장 가능',
+                label: '무대 혼잡도',
+                value: primaryZone?.level ? congestionLabels[primaryZone.level] : '정보 없음',
               },
             ]}
           />
         </section>
+        <RequestState error={stageResource.error} retry={() => void stageResource.refresh()} />
         <div className="grid grid-cols-4 gap-4 max-[360px]:gap-2">
           {shortcuts.map((link) => (
             <Link
@@ -90,7 +108,9 @@ export default function HomePage() {
           <SectionTitle>오늘의 무대</SectionTitle>
           <ScheduleList
             items={performances.filter(
-              (p) => p.date === today && (primaryStageId === undefined || p.stage === String(primaryStageId)),
+              (p) =>
+                p.date === today &&
+                (primaryStageId === undefined || p.stage === String(primaryStageId)),
             )}
           />
         </section>
