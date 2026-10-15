@@ -123,6 +123,9 @@
     background-image:
       url('/assets/figma/admin-waiting/settings-surface.svg'), linear-gradient(white, white);
   }
+  .qr-scanner-page {
+    background-image: url('/assets/figma/scanner/surface.svg');
+  }
   .card {
     @apply rounded-xl bg-white shadow-card;
   }

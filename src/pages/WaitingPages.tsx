@@ -163,21 +163,7 @@ export function WaitingPage() {
 function ScannerBackground() {
   return <div className="relative min-h-[calc(100dvh-68px)] rounded-t-xl bg-black text-white" />
 }
-export function ScanPage() {
-  return (
-    <Page title="QR 웨이팅" back="/waiting">
-      <div className="page-pad">
-        <WaitingInstructions />
-        <p className="text-sm">
-          휴대폰 기본 카메라로 부스에 게시된 QR 코드를 스캔하면 접수 화면이 열립니다.
-        </p>
-        <Link to="/waiting" className="primary-button green-gradient">
-          내 대기표 보기
-        </Link>
-      </div>
-    </Page>
-  )
-}
+export { default as ScanPage } from './QrScanPage'
 export function QrEntryPage() {
   const { boothCode = '' } = useParams()
   const loader = useCallback(
