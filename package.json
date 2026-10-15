@@ -11,7 +11,9 @@
     "test": "playwright test",
     "format": "prettier --write src tests *.ts *.json README.md index.html",
     "test:integration": "playwright test --config=playwright.live.config.ts",
-    "test:mock": "playwright test --config=playwright.mock.config.ts"
+    "test:mock": "playwright test --config=playwright.mock.config.ts",
+    "dev:mock": "VITE_USE_MOCK=true vite",
+    "test:remote": "playwright test --config=playwright.remote.config.ts"
   },
   "dependencies": {
     "@stomp/stompjs": "^7.3.0",
