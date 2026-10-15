@@ -58,14 +58,19 @@ export default function MapPage() {
           ]}
         />
       </div>
-      <div className="border-b border-[#d9d9d9] px-5 pt-3 pb-[11px]">
+      <div className="border-b border-[#d9d9d9] px-5 py-3.5">
         <Chips
-          compact
-          options={boothCategories.map((c) => (c === '학교본부' ? '학교 본부' : c))}
-          value={category === '학교본부' ? '학교 본부' : category}
+          options={boothCategories}
+          value={category}
           onChange={(v) => {
-            update('category', v.replace('학교 본부', '학교본부'))
-            update('facility', '')
+            setParams(
+              (previous) => {
+                previous.set('category', v)
+                previous.delete('facility')
+                return previous
+              },
+              { replace: true },
+            )
           }}
         />
       </div>
