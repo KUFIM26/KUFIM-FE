@@ -70,7 +70,10 @@ function MapCanvas({
   const gesture = useRef<{ view: View; center: Point; distance: number } | null>(null)
   const geometry = () => {
     const box = viewport.current!.getBoundingClientRect()
-    const fit = Math.min(box.width / floorplan.width, box.height / floorplan.height)
+    // The public map starts at the former 141% view, now labelled 100%.
+    const fit =
+      Math.min(box.width / floorplan.width, box.height / floorplan.height) *
+      (variant === 'map' ? 1.41 : 1)
     return { box, width: floorplan.width * fit, height: floorplan.height * fit }
   }
   const apply = (next: View) => {
@@ -87,7 +90,8 @@ function MapCanvas({
   const reset = () => {
     pointers.current.clear()
     gesture.current = null
-    apply({ x: 0, y: 0, scale: 1 })
+    const { box, width, height } = geometry()
+    apply({ x: (box.width - width) / 2, y: (box.height - height) / 2, scale: 1 })
   }
   const zoom = (factor: number, anchor?: Point) => {
     const { box } = geometry()
