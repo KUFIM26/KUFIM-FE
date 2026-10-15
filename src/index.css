@@ -218,9 +218,9 @@
   }
 }
 
-@media (max-height: 780px) {
+@layer components {
   .registration-sheet {
-    top: 152px;
+    height: min(615px, calc(100dvh - 88px));
   }
 }
 

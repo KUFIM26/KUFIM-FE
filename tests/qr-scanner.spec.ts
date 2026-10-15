@@ -1,10 +1,11 @@
 import { test, expect } from '@playwright/test'
 import type { Page } from '@playwright/test'
 import { readFileSync } from 'node:fs'
-import { mockApi } from './api-fixture'
+import { booth, mockApi } from './api-fixture'
 
 const validImage = `data:image/png;base64,${readFileSync('tests/fixtures/booth-qr.png').toString('base64')}`
 const invalidImage = `data:image/png;base64,${readFileSync('tests/fixtures/invalid-qr.png').toString('base64')}`
+const registrationImage = `data:image/png;base64,${readFileSync('tests/fixtures/registration-qr.png').toString('base64')}`
 async function camera(page: Page, image = '', denied = false) {
   await mockApi(page)
   await page.addInitScript(
@@ -78,6 +79,53 @@ test('real QR image opens its booth registration once and releases camera', asyn
   await page.goto('/waiting/scan')
   await expect(page).toHaveURL(/\/waiting\/register\/7$/, { timeout: 15000 })
   expect(lookups).toBe(1)
+  await streamsStopped(page)
+})
+
+test('existing direct registration QR validates booth 5 and opens registration', async ({
+  page,
+}) => {
+  await camera(page, registrationImage)
+  let exists = false
+  await page.route('**/api/v1/booths/5', (route) =>
+    route.fulfill(
+      exists
+        ? { json: { success: true, error: null, data: { ...booth, boothId: 5 } } }
+        : {
+            status: 404,
+            json: {
+              success: false,
+              data: null,
+              error: { code: 'B002', message: '부스를 찾을 수 없습니다.' },
+            },
+          },
+    ),
+  )
+  await page.route('**/api/v1/booths/5/waiting-status', (route) =>
+    route.fulfill({
+      json: {
+        success: true,
+        error: null,
+        data: {
+          boothId: 5,
+          waitingEnabled: true,
+          acceptingStatus: 'OPEN',
+          effectiveWaitingStatus: 'OPEN',
+          waitingTeamCount: 0,
+          estimatedWaitMinutes: 0,
+          myActiveWaitingId: null,
+        },
+      },
+    }),
+  )
+  await page.goto('/waiting/scan')
+  const dialog = page.getByRole('dialog', { name: 'QR 코드 확인' })
+  await expect(dialog).toContainText('부스를 찾을 수 없습니다.', { timeout: 15000 })
+  await expect(page).toHaveURL(/\/waiting\/scan$/)
+  exists = true
+  await dialog.getByRole('button', { name: '다시 스캔하기' }).click()
+  await expect(page).toHaveURL(/\/waiting\/register\/5$/, { timeout: 15000 })
+  await expect(page.getByRole('heading', { name: booth.name, exact: true })).toBeVisible()
   await streamsStopped(page)
 })
 
