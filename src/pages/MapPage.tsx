@@ -72,8 +72,16 @@ export default function MapPage() {
       <FacilityFilters
         value={facility}
         onChange={(v) => {
-          update('facility', v)
-          if (v) update('view', 'list')
+          setParams(
+            (previous) => {
+              if (v) {
+                previous.set('facility', v)
+                previous.set('view', 'list')
+              } else previous.delete('facility')
+              return previous
+            },
+            { replace: true },
+          )
         }}
       />
       <div className="relative min-h-[652px]" style={{ height: 'calc(100dvh - 246px)' }}>

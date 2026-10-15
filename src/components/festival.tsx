@@ -191,42 +191,49 @@ export function BoothRow({
 export function FacilityFilters({
   value,
   onChange,
-  subdued = false,
 }: {
   value: string
   onChange: (value: string) => void
-  subdued?: boolean
 }) {
-  const a = subdued ? assets['118:1642'] : assets['53:1227']
-  const icons = [
-    a.imgFrame1597881221,
-    a.imgFrame1597881222,
-    a.imgFrame1597881223,
-    a.imgGroup3,
-    a.imgFrame1597881224,
+  const colored = assets['53:1227']
+  const muted = assets['118:1642']
+  const iconPairs = [
+    [colored.imgFrame1597881221, muted.imgFrame1597881221],
+    [colored.imgFrame1597881222, muted.imgFrame1597881222],
+    [colored.imgFrame1597881223, muted.imgFrame1597881223],
+    [colored.imgGroup3, muted.imgGroup3],
+    [colored.imgFrame1597881224, muted.imgFrame1597881224],
   ]
+  const hasSelection = facilities.includes(value)
   return (
     <div
       className="flex items-center justify-between gap-1 px-5 py-3"
       role="group"
       aria-label="시설 유형"
     >
-      {facilities.map((facility, i) => (
-        <button
-          key={facility}
-          type="button"
-          aria-pressed={value === facility}
-          onClick={() => onChange(value === facility ? '' : facility)}
-          className={`flex min-w-0 flex-col items-center gap-1 rounded-md text-sm font-medium text-[#383838] ${value === facility ? 'ring-2 ring-brand ring-offset-2' : ''}`}
-        >
-          <span
-            className={`flex size-[30px] items-center justify-center rounded-full ${i === 3 ? (subdued ? 'bg-[#cdcdcd]' : 'bg-[#e3d0ff]') : ''}`}
+      {facilities.map((facility, i) => {
+        const isMuted = hasSelection && value !== facility
+        return (
+          <button
+            key={facility}
+            type="button"
+            aria-pressed={value === facility}
+            onClick={() => onChange(value === facility ? '' : facility)}
+            className="flex min-w-0 flex-col items-center gap-1 rounded-md text-sm font-medium text-[#383838] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand"
           >
-            <Asset src={icons[i]} />
-          </span>
-          <span className="whitespace-nowrap max-[360px]:text-xs">{facility}</span>
-        </button>
-      ))}
+            <span
+              className={`flex size-[30px] items-center justify-center rounded-full ${i === 3 ? (isMuted ? 'bg-[#cdcdcd]' : 'bg-[#e3d0ff]') : ''}`}
+            >
+              <Asset
+                src={iconPairs[i][isMuted ? 1 : 0]}
+                // Figma's control-room asset only has a colored variant.
+                className={isMuted && i === 0 ? 'grayscale contrast-75 brightness-105' : ''}
+              />
+            </span>
+            <span className="whitespace-nowrap max-[360px]:text-xs">{facility}</span>
+          </button>
+        )
+      })}
     </div>
   )
 }

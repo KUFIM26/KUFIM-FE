@@ -366,7 +366,7 @@ export function BoothFormPage() {
     initial === 'night' || initial === 'facility' ? initial : 'day',
   )
   const [category, setCategory] = useState(
-    item?.category || (initial === 'facility' ? '상황실' : '총학생회'),
+    item?.category || (initial === 'facility' ? '' : '총학생회'),
   )
   const [position, setPosition] = useState<{ x: number; y: number } | null>(item?.position ?? null)
   const facility = period === 'facility'
@@ -426,7 +426,7 @@ export function BoothFormPage() {
           onChange={(v) => {
             if (item && (item.period === 'facility') !== (v === 'facility')) return
             setPeriod(v as Booth['period'])
-            setCategory(v === 'facility' ? '상황실' : '총학생회')
+            setCategory(v === 'facility' ? '' : '총학생회')
           }}
           options={[
             { value: 'day', label: '주간', sublabel: '09:00~17:00' },
@@ -435,9 +435,7 @@ export function BoothFormPage() {
           ]}
         />
       </div>
-      {facility && (
-        <FacilityFilters subdued value={category} onChange={(v) => setCategory(v || '상황실')} />
-      )}
+      {facility && <FacilityFilters value={category} onChange={setCategory} />}
       <form id="booth-form" className="page-pad !gap-6 !pt-3" onSubmit={submit}>
         {!facility && (
           <section className="form-field">
