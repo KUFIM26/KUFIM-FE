@@ -39,6 +39,9 @@ export default function MenuPage({ admin = false }: { admin?: boolean }) {
       items: [
         ['행사장 지도', '/map'],
         [admin ? 'QR 웨이팅 관리' : 'QR 웨이팅', admin ? '/admin/waiting' : '/waiting'],
+        ...(admin && auth.account?.role === 'SUPER_ADMIN'
+          ? [['혼잡도 관리', '/admin/congestion']]
+          : []),
         ['긴급 신고', '/report'],
       ],
     },
@@ -55,7 +58,9 @@ export default function MenuPage({ admin = false }: { admin?: boolean }) {
           <div>
             <p className="text-sm font-bold">{festival?.name || '축제 정보 준비 중'}</p>
             <p className="mt-1.5 text-xs font-medium">
-              {festival ? `${festivalDate(festival.startAt)} ~ ${festivalDate(festival.endAt)}` : ''}
+              {festival
+                ? `${festivalDate(festival.startAt)} ~ ${festivalDate(festival.endAt)}`
+                : ''}
             </p>
           </div>
         </Card>

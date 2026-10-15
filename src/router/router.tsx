@@ -2,6 +2,7 @@ import { AdminGuard, LoginPage } from '../pages/AuthPages'
 import { createBrowserRouter } from 'react-router-dom'
 import { RootLayout } from '../components/layout'
 import HomePage from '../pages/HomePage'
+import AdminCongestionPage from '../pages/AdminCongestionPage'
 import MenuPage from '../pages/MenuPage'
 import MapPage from '../pages/MapPage'
 import { BoothsPage, BoothDetailPage } from '../pages/BoothsPage'
@@ -49,6 +50,7 @@ export const router = createBrowserRouter([
           { path: 'booths/new', element: <BoothFormPage key="new" /> },
           { path: 'booths/:id/edit', element: <BoothFormPage /> },
           { path: 'waiting', element: <AdminWaitingListPage /> },
+          { path: 'congestion', element: <AdminCongestionPage /> },
           { path: 'waiting/:boothId', element: <AdminQueuePage /> },
           { path: 'waiting/:boothId/settings', element: <AdminSettingsPage /> },
         ],

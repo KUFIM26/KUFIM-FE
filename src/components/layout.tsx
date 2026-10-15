@@ -31,12 +31,14 @@ export function Header({
   plain = false,
   home = false,
   action,
+  backIcon,
 }: {
   title: string
   back?: string
   plain?: boolean
   home?: boolean
   action?: ReactNode
+  backIcon?: string
 }) {
   const navigate = useNavigate()
   const festival = useContext(FestivalContext)?.festival
@@ -74,7 +76,7 @@ export function Header({
           onClick={goBack}
           className="flex size-7 shrink-0 items-center justify-center rounded-full bg-[#f3f3f3]"
         >
-          <Asset src={assets['31:385'].imgVector} className="rotate-180" />
+          <Asset src={backIcon ?? assets['31:385'].imgVector} className="rotate-180" />
         </button>
       )}
       <h1 className="min-w-0 flex-1 text-lg font-bold">{title}</h1>
@@ -92,6 +94,7 @@ export function Page({
   action,
   children,
   className = '',
+  backIcon,
 }: {
   title: string
   back?: string
@@ -102,10 +105,18 @@ export function Page({
   action?: ReactNode
   children: ReactNode
   className?: string
+  backIcon?: string
 }) {
   return (
     <>
-      <Header title={title} back={back} plain={plain} home={home} action={action} />
+      <Header
+        title={title}
+        back={back}
+        plain={plain}
+        home={home}
+        action={action}
+        backIcon={backIcon}
+      />
       <main
         id="main-content"
         className={`page-surface ${nav ? 'pb-[56px]' : ''} ${className}`}

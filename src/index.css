@@ -89,6 +89,12 @@
   .page-pad {
     @apply flex flex-col gap-5 px-5 pt-5 pb-7;
   }
+  .congestion-page {
+    background-image: url('/assets/figma/congestion/surface.svg'), linear-gradient(white, white);
+  }
+  .congestion-page .bottom-actions {
+    background-image: url('/assets/figma/congestion/footer.svg');
+  }
   .card {
     @apply rounded-xl bg-white shadow-card;
   }
