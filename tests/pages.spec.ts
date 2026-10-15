@@ -118,16 +118,11 @@ test('booth admin can operate assigned waiting, cannot open content management',
   await expect(page.getByRole('link', { name: '테스트 부스', exact: true })).toBeVisible()
 })
 
-test('queue call, contact, enter and settings use real contract', async ({ page }) => {
+test('queue call, enter and settings use real contract', async ({ page }) => {
   const state = await mockApi(page, { loggedIn: true, active: true })
   await page.goto('/admin/waiting/7')
   await page.getByRole('button', { name: '호출하기' }).click()
-  await expect(page.getByRole('button', { name: '재호출', exact: true })).toBeVisible()
-  await page.getByRole('button', { name: '전화하기' }).click()
-  await expect(page.getByRole('link', { name: /01012341234/ })).toHaveAttribute(
-    'href',
-    'tel:01012341234',
-  )
+  await expect(page.getByText(/호출완료 \/ 호출한지/)).toBeVisible()
   await page.getByRole('button', { name: '입장 완료', exact: true }).click()
   await expect(page.getByText('현재 대기 중인 팀이 없어요.')).toBeVisible()
   expect(state.tickets[0].status).toBe('ENTERED')

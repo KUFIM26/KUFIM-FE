@@ -161,9 +161,9 @@ test('admin queue falls back to polling after the socket disconnects', async ({ 
   const stomp = await broker(page)
   await page.goto('/admin/waiting/7')
   await expect(page.getByText('실시간 연결됨', { exact: true })).toBeVisible()
-  Object.assign(state.tickets[0], { status: 'CALLED' })
+  Object.assign(state.tickets[0], { status: 'CALLED', calledAt: ticket.serverTime })
   stomp.push('/topic/admin/booth/7/waiting')
-  await expect(page.getByRole('button', { name: '재호출', exact: true })).toBeVisible({
+  await expect(page.getByText(/호출완료 \/ 호출한지/)).toBeVisible({
     timeout: 3000,
   })
   // Keep subsequent connection attempts down and let the immediate disconnect refresh finish.

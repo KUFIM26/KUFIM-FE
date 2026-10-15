@@ -131,7 +131,7 @@ test('real Spring Boot session, catalog saves, QR, registration, restoration, ca
   await expect(page.getByText('실시간 연결됨', { exact: true })).toBeVisible()
   await expect.poll(() => personalSubscribed).toBe(true)
   await page.getByRole('button', { name: '호출하기', exact: true }).click()
-  await expect(page.getByRole('button', { name: '재호출', exact: true })).toBeVisible()
+  await expect(page.getByText(/호출완료 \/ 호출한지/)).toBeVisible()
   await expect(user.getByRole('heading', { name: '호출됨', exact: true })).toBeVisible({
     timeout: 3000,
   })

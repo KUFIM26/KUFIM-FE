@@ -3,7 +3,7 @@ import type { FormEvent } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import axios from 'axios'
 import { Page } from '../components/layout'
-import { Asset, Button, Card, ConfirmDialog, EmptyState, SectionTitle } from '../components/ui'
+import { Asset, Button, Card, ConfirmDialog, SectionTitle } from '../components/ui'
 import { BoothRow, WaitingNumbers } from '../components/festival'
 import { RequestState } from '../components/RequestState'
 import { figmaAssets as assets } from '../data/figma-assets'
@@ -80,9 +80,39 @@ export function WaitingPage() {
           </section>
         ) : (
           !resource.loading &&
-          !resource.error && <EmptyState>아직 신청한 웨이팅이 없어요.</EmptyState>
+          !resource.error && (
+            <section
+              role="status"
+              className="flex h-[201px] flex-col items-center justify-center gap-[18px] rounded-xl bg-[#e8f5ee] p-3"
+            >
+              <Asset src="/assets/figma/waiting-empty/alarm.svg" />
+              <div className="flex w-full flex-col gap-2 text-center">
+                <h2 className="text-lg font-bold">아직 신청한 웨이팅이 없어요.</h2>
+                <p className="text-xs font-normal">
+                  부스에 직접 방문해 현장 QR을 스캔하면
+                  <br />
+                  웨이팅을 등록할 수 있어요.
+                </p>
+              </div>
+            </section>
+          )
         )}
-        <WaitingInstructions />
+        {active ? (
+          <WaitingInstructions />
+        ) : (
+          <Card className="p-4">
+            <h2 className="text-sm font-bold">이용 방법</h2>
+            <div className="mt-1.5 text-xs font-medium">
+              <ol className="list-decimal pl-[18px]">
+                <li>지도에서 원하는 부스 위치 확인</li>
+                <li>해당 부스로 직접 이동</li>
+                <li>부스의 QR코드 스캔</li>
+                <li>입장 순서가 되면 알림/문자 수신하여 입장</li>
+              </ol>
+              <p className="pl-[18px]">(호출 후 10분 안에 입장하지 않을 경우 자동 취소)</p>
+            </div>
+          </Card>
+        )}
         <RequestState error={action.error} />
         {active ? (
           <Button tone="red" disabled={action.pending} onClick={() => setCancelOpen(true)}>
@@ -90,16 +120,22 @@ export function WaitingPage() {
           </Button>
         ) : (
           <Link className="primary-button green-gradient" to="/waiting/scan">
-            부스 QR 스캔 안내
+            <Asset src="/assets/figma/waiting-empty/qr.svg" />
+            부스 QR 스캔하기
           </Link>
         )}
-        <SectionTitle>현재 가장 인기있는 부스 TOP3</SectionTitle>
-        <RequestState error={popular.error} retry={() => void popular.refresh()} />
-        {popular.data?.map((booth) => (
-          <Card key={booth.id} className="px-4">
-            <BoothRow booth={booth} />
-          </Card>
-        ))}
+        <section className="flex flex-col gap-2">
+          <h2 className="flex items-center gap-1.5 text-base font-bold">
+            <Asset src="/assets/figma/waiting-empty/title.svg" />
+            현재 가장 인기있는 부스 TOP3
+          </h2>
+          <RequestState error={popular.error} retry={() => void popular.refresh()} />
+          {popular.data?.map((booth) => (
+            <Card key={booth.id} className="px-4">
+              <BoothRow booth={booth} />
+            </Card>
+          ))}
+        </section>
       </div>
       <ConfirmDialog
         open={cancelOpen}

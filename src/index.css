@@ -95,6 +95,34 @@
   .congestion-page .bottom-actions {
     background-image: url('/assets/figma/congestion/footer.svg');
   }
+  .admin-queue-page .queue-action {
+    min-height: 40px;
+    height: 40px;
+    padding: 8px 4px;
+    border-radius: 13px;
+    font-size: 16px;
+    box-shadow: 1px 1px 1px rgb(0 0 0 / 10%);
+  }
+  .admin-queue-page {
+    background-image: url('/assets/figma/admin-waiting/surface.svg'), linear-gradient(white, white);
+  }
+  .admin-queue-page .confirm-dialog::backdrop {
+    background: rgb(0 0 0 / 40%);
+  }
+  .admin-queue-page .confirm-dialog {
+    min-height: 137px;
+  }
+  .admin-queue-page .confirm-dialog > div:first-of-type {
+    font-weight: 500;
+    line-height: 17px;
+  }
+  .admin-settings-page .bottom-actions {
+    background-image: url('/assets/figma/admin-waiting/footer.svg');
+  }
+  .admin-settings-page {
+    background-image:
+      url('/assets/figma/admin-waiting/settings-surface.svg'), linear-gradient(white, white);
+  }
   .card {
     @apply rounded-xl bg-white shadow-card;
   }
