@@ -1,6 +1,5 @@
 import { useFestival } from '../app/festival-context'
 import { festivalDays, performanceDays, seoulDate } from '../apis/adapters'
-import type { Booth as MapBooth } from '../data/models'
 import { Link } from 'react-router-dom'
 import { Asset, Card, EmptyState, Tabs } from './ui'
 import { figmaAssets as assets } from '../data/figma-assets'
@@ -237,44 +236,4 @@ export function FacilityFilters({
     </div>
   )
 }
-export function MapImage({
-  className = '',
-  variant = 'map',
-  markers = [],
-}: {
-  className?: string
-  variant?: 'map' | 'mini' | 'picker'
-  markers?: MapBooth[]
-}) {
-  const { floorplan } = useFestival()
-  if (!floorplan)
-    return (
-      <div
-        className={`flex items-center justify-center bg-[#e8eee9] p-5 text-sm text-muted ${className}`}
-      >
-        등록된 지도가 없습니다.
-      </div>
-    )
-  return (
-    <div
-      className={`relative overflow-hidden ${className}`}
-      data-map-variant={variant}
-      style={{ aspectRatio: `${floorplan.width}/${floorplan.height}`, height: 'auto' }}
-    >
-      <img src={floorplan.imageUrl} alt="축제 지도" draggable={false} className="h-full w-full" />
-      {markers
-        .filter((b) => b.position)
-        .map((b) => (
-          <Link
-            key={b.id}
-            to={`/booths/${b.id}`}
-            aria-label={`${b.name} 위치`}
-            className="absolute -translate-x-1/2 -translate-y-full rounded bg-brand px-2 py-1 text-[10px] font-bold text-white shadow"
-            style={{ left: `${b.position!.x}%`, top: `${b.position!.y}%` }}
-          >
-            {b.name}
-          </Link>
-        ))}
-    </div>
-  )
-}
+export { MapImage } from './MapImage'

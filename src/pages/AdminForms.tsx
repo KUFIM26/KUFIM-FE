@@ -283,13 +283,15 @@ function LocationPicker({
   open,
   onClose,
   onSelect,
+  initialPoint,
 }: {
   open: boolean
   onClose: () => void
   onSelect: (point: { x: number; y: number }) => void
+  initialPoint: { x: number; y: number } | null
 }) {
   const dialog = useRef<HTMLDialogElement>(null)
-  const [point, setPoint] = useState<{ x: number; y: number } | null>(null)
+  const [point, setPoint] = useState(initialPoint)
   useEffect(() => {
     if (open && !dialog.current?.open) dialog.current?.showModal()
     else if (!open) dialog.current?.close()
@@ -297,50 +299,16 @@ function LocationPicker({
   return (
     <dialog ref={dialog} aria-label="부스 위치 지정" className="location-dialog" onCancel={onClose}>
       <p className="sr-only">지도에서 위치를 클릭하거나 방향키로 이동한 후 지정하기를 누르세요.</p>
-      <button
-        type="button"
-        aria-label="지도에서 위치 선택"
-        className="absolute inset-x-5 top-[calc(50%-270px)] block overflow-hidden rounded-xl"
-        onClick={(event) => {
-          const box = event.currentTarget.getBoundingClientRect()
-          setPoint({
-            x: ((event.clientX - box.left) / box.width) * 100,
-            y: ((event.clientY - box.top) / box.height) * 100,
-          })
-        }}
-        onKeyDown={(event) => {
-          if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) {
-            event.preventDefault()
-            setPoint((p) => ({
-              x: Math.max(
-                2,
-                Math.min(
-                  98,
-                  (p?.x ?? 50) +
-                    (event.key === 'ArrowLeft' ? -2 : event.key === 'ArrowRight' ? 2 : 0),
-                ),
-              ),
-              y: Math.max(
-                2,
-                Math.min(
-                  98,
-                  (p?.y ?? 50) + (event.key === 'ArrowUp' ? -2 : event.key === 'ArrowDown' ? 2 : 0),
-                ),
-              ),
-            }))
-          }
-        }}
-      >
-        <MapImage variant="picker" className="h-[499px] max-h-[65dvh]" />
-        {point && (
-          <span
-            className="absolute -translate-x-1/2 -translate-y-full"
-            style={{ left: `${point.x}%`, top: `${point.y}%` }}
-          >
-            <Asset src={assets['53:1227'].imgGroup2} />
-          </span>
-        )}
-      </button>
+      {open && (
+        <div className="absolute inset-x-5 top-12 bottom-28">
+          <MapImage
+            variant="picker"
+            className="h-full w-full rounded-xl"
+            selectedPoint={point}
+            onSelect={setPoint}
+          />
+        </div>
+      )}
       <div className="absolute inset-x-0 bottom-0 flex gap-2 rounded-t-xl bg-white p-5">
         <Button
           className="!bg-[#1d8a45] !bg-none !text-base"
@@ -524,8 +492,10 @@ export function BoothFormPage() {
         cancel={() => navigate('/admin/booths')}
       />
       <LocationPicker
+        key={pickerOpen ? 'open' : 'closed'}
         open={params.get('location') === 'pick'}
         onClose={closePicker}
+        initialPoint={position}
         onSelect={(p) => {
           setPosition(p)
           closePicker()

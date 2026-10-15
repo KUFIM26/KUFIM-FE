@@ -46,7 +46,7 @@ export default function MapPage() {
           </button>
         )
       }
-      className="!pb-0 overflow-hidden"
+      className="!pb-0 flex h-[calc(100dvh-68px)] flex-col overflow-hidden [&>div:not(:last-child)]:shrink-0"
     >
       <div className="px-5 pt-3">
         <Tabs
@@ -89,7 +89,7 @@ export default function MapPage() {
           )
         }}
       />
-      <div className="relative min-h-[652px]" style={{ height: 'calc(100dvh - 246px)' }}>
+      <div className="relative min-h-0 flex-1">
         <MapImage
           markers={items.flatMap((b) => {
             const pin = pins.find(
@@ -99,7 +99,7 @@ export default function MapPage() {
             )
             return pin ? [{ ...b, position: { x: pin.xPercent, y: pin.yPercent } }] : []
           })}
-          className="w-full"
+          className="h-full w-full"
         />
         {list && (
           <section
