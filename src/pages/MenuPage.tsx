@@ -2,11 +2,16 @@ import { useFestival } from '../app/festival-context'
 import { useAuth } from '../app/auth-context'
 import { useAction } from '../hooks/useResource'
 import { RequestState } from '../components/RequestState'
-import { dateText } from '../apis/adapters'
+import { seoulDate } from '../apis/adapters'
 import { Link } from 'react-router-dom'
 import { Page } from '../components/layout'
 import { Asset, Card, SectionTitle } from '../components/ui'
 import { figmaAssets as assets } from '../data/figma-assets'
+
+const festivalDate = (value: string) => {
+  const date = seoulDate(value)
+  return `${date.slice(5, 7)}월 ${date.slice(8, 10)}일`
+}
 
 export default function MenuPage({ admin = false }: { admin?: boolean }) {
   const { festival } = useFestival()
@@ -49,8 +54,8 @@ export default function MenuPage({ admin = false }: { admin?: boolean }) {
           </div>
           <div>
             <p className="text-sm font-bold">{festival?.name || '축제 정보 준비 중'}</p>
-            <p className="mt-1 text-xs font-medium">
-              {festival ? `${dateText(festival.startAt)} ~ ${dateText(festival.endAt)}` : ''}
+            <p className="mt-1.5 text-xs font-medium">
+              {festival ? `${festivalDate(festival.startAt)} ~ ${festivalDate(festival.endAt)}` : ''}
             </p>
           </div>
         </Card>

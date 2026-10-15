@@ -1,6 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1000" viewBox="0 0 800 1000">
-<rect width="800" height="1000" fill="#edf3e9"/>
-<path d="M0 210H800M0 570H800M150 0V1000M650 0V1000" stroke="#fff" stroke-width="45"/>
-<ellipse cx="405" cy="440" rx="160" ry="105" fill="#addbe2"/>
-<g fill="#d1d9cb" stroke="#a9b8a1" stroke-width="3"><rect x="210" y="80" width="150" height="90" rx="12"/><rect x="450" y="80" width="160" height="90" rx="12"/><rect x="210" y="640" width="160" height="100" rx="12"/><rect x="450" y="640" width="160" height="100" rx="12"/></g>
-<g font-family="sans-serif" text-anchor="middle" fill="#45614a" font-size="25"><text x="400" y="445">일감호</text><text x="285" y="135">학생회관</text><text x="530" y="135">공학관</text><text x="290" y="697">새천년관</text><text x="530" y="697">대운동장</text><text x="400" y="940" font-size="21">축제 체험용 지도 · 실제 위치와 다를 수 있습니다</text></g></svg>
