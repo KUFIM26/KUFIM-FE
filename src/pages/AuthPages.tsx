@@ -39,13 +39,7 @@ export function LoginPage() {
   const [password, setPassword] = useState('')
   const action = useAction()
   const navigate = useNavigate()
-  const location = useLocation()
-  const next = new URLSearchParams(location.search).get('next') || '/admin'
-  const destination =
-    next === '/admin' || (next.startsWith('/admin/') && !next.startsWith('/admin/login'))
-      ? next
-      : '/admin'
-  if (auth.account) return <Navigate to={destination} replace />
+  if (auth.account) return <Navigate to="/" replace />
   return (
     <Page title="관리자 로그인" back="/menu">
       <form
@@ -54,7 +48,7 @@ export function LoginPage() {
           e.preventDefault()
           void action.run(async () => {
             await auth.login(loginId, password)
-            navigate(destination, { replace: true })
+            navigate('/', { replace: true })
           })
         }}
       >

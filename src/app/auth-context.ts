@@ -6,6 +6,7 @@ export type AuthState = {
   error: string
   ensure: () => void
   refresh: () => Promise<void>
+  checkSession: (onChecked?: (session: Account | null) => void) => Promise<Account | null>
   login: (loginId: string, password: string) => Promise<void>
   logout: () => Promise<void>
 }

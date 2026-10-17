@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { startTransition, useCallback, useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import axios from 'axios'
 import { errorMessage, SESSION_EXPIRED } from '../apis/axios'
@@ -12,30 +12,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState('')
   const version = useRef(0)
   const started = useRef(false)
-  const refresh = useCallback(async () => {
+  const checkSession = useCallback(async (onChecked?: (session: Account | null) => void) => {
     started.current = true
     const current = ++version.current
-    setLoading(true)
     setError('')
     try {
       const response = await useAuthApi.me()
       if (current === version.current) {
-        setAccount(response.data.data)
+        startTransition(() => {
+          setAccount(response.data.data)
+          setLoading(false)
+          onChecked?.(response.data.data)
+        })
         void reconnectRealtime()
+        return response.data.data
       }
+      return null
     } catch (e) {
       if (current === version.current) {
-        setAccount(null)
-        if (!axios.isAxiosError(e) || e.response?.status !== 401) setError(errorMessage(e))
+        if (!axios.isAxiosError(e) || e.response?.status !== 401) {
+          setLoading(false)
+          throw e
+        }
+        // Commit session expiry and menu navigation together before the guard redirects.
+        startTransition(() => {
+          setAccount(null)
+          setLoading(false)
+          onChecked?.(null)
+        })
       }
-    } finally {
-      if (current === version.current) setLoading(false)
+      return null
     }
   }, [])
+  const refresh = useCallback(async () => {
+    setLoading(true)
+    try {
+      await checkSession()
+    } catch (e) {
+      setError(errorMessage(e))
+    }
+  }, [checkSession])
   const ensure = useCallback(() => {
     if (!started.current) void refresh()
   }, [refresh])
-  // Public visitors never request an admin session.
+  // Public pages only check the admin session when the visitor opens the menu.
   useEffect(() => {
     const expired = () => {
       version.current++
@@ -67,7 +87,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     void reconnectRealtime()
   }
   return (
-    <AuthContext.Provider value={{ account, loading, error, ensure, refresh, login, logout }}>
+    <AuthContext.Provider
+      value={{ account, loading, error, ensure, refresh, checkSession, login, logout }}
+    >
       {children}
     </AuthContext.Provider>
   )

@@ -50,6 +50,11 @@ test('admin session cookies, CSRF, protected lists and QR downloads work through
   await page.getByLabel('아이디', { exact: true }).fill(login!)
   await page.getByLabel('비밀번호', { exact: true }).fill(password!)
   await page.getByRole('button', { name: '로그인', exact: true }).click()
+  await expect(page).toHaveURL('/')
+  await page
+    .getByRole('navigation', { name: '주 메뉴' })
+    .getByRole('link', { name: '전체 보기' })
+    .click()
   await expect(page.getByRole('heading', { name: '관리자 메뉴', exact: true })).toBeVisible()
   const cookies = await page.context().cookies()
   expect(cookies.some((cookie) => cookie.name === 'KUFIMSESSION' && cookie.httpOnly)).toBe(true)

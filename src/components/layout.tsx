@@ -5,6 +5,9 @@ import type { ReactNode } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { Asset } from './ui'
 import { figmaAssets as assets } from '../data/figma-assets'
+import { useAuth } from '../app/auth-context'
+import { useAction } from '../hooks/useResource'
+import { RequestState } from './RequestState'
 
 export function RootLayout() {
   const { pathname } = useLocation()
@@ -137,6 +140,13 @@ export function Page({
   )
 }
 function BottomNav({ action }: { action?: ReactNode }) {
+  const { account, checkSession } = useAuth()
+  const navigate = useNavigate()
+  const menuAction = useAction()
+  const openMenu = () =>
+    menuAction.run(async () => {
+      await checkSession((session) => navigate(session ? '/admin' : '/menu'))
+    })
   const links = [
     {
       to: '/',
@@ -157,8 +167,9 @@ function BottomNav({ action }: { action?: ReactNode }) {
       active: assets['75:2'].imgVector4,
     },
     {
-      to: '/menu',
+      to: account ? '/admin' : '/menu',
       label: '전체 보기',
+      menu: true,
       normal: assets['17:303'].imgFrame1597881159,
       active: assets['94:255'].imgFrame1597881159,
     },
@@ -169,6 +180,11 @@ function BottomNav({ action }: { action?: ReactNode }) {
       style={{ bottom: 'max(16px, env(safe-area-inset-bottom))' }}
     >
       {action && <div className="pointer-events-auto">{action}</div>}
+      {menuAction.error && (
+        <div className="pointer-events-auto rounded-xl bg-white shadow-card">
+          <RequestState error={menuAction.error} retry={() => void openMenu()} />
+        </div>
+      )}
       <nav
         aria-label="주 메뉴"
         className="pointer-events-auto flex w-full justify-between rounded-[15px] bg-white px-[23px] py-1.5 shadow-nav"
@@ -178,6 +194,16 @@ function BottomNav({ action }: { action?: ReactNode }) {
             key={link.to}
             to={link.to}
             end={link.to === '/'}
+            aria-disabled={link.menu && menuAction.pending ? true : undefined}
+            aria-busy={link.menu && menuAction.pending ? true : undefined}
+            onClick={
+              link.menu
+                ? (event) => {
+                    event.preventDefault()
+                    void openMenu()
+                  }
+                : undefined
+            }
             className={({ isActive }) =>
               `flex w-[44.529px] flex-col items-center text-[10.687px] font-semibold ${isActive ? 'text-brand' : 'text-black'}`
             }

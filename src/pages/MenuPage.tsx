@@ -48,7 +48,7 @@ export default function MenuPage({ admin = false }: { admin?: boolean }) {
     { title: '기타', items: [['이용 안내', '/guide']] },
   ]
   return (
-    <Page title={admin ? '관리자 메뉴' : '전체 메뉴'} plain nav={!admin}>
+    <Page title={admin ? '관리자 메뉴' : '전체 메뉴'} plain nav>
       <div className={`page-pad !pt-6 ${admin ? 'gap-5' : '!gap-3'}`}>
         <Card className="flex items-center gap-3 p-4">
           <div className="flex size-10 shrink-0 flex-col items-center justify-center rounded-xl bg-[#1c8944] text-xs font-bold text-white">
