@@ -27,7 +27,7 @@ export function RootLayout() {
 }
 export function Header({
   title,
-  back = '/',
+  back,
   plain = false,
   home = false,
   action,
@@ -46,8 +46,8 @@ export function Header({
     document.title = `${title} · KUFIM`
   }, [title])
   const goBack = () => {
-    if (window.history.state?.idx > 0) navigate(-1)
-    else navigate(back)
+    if (back !== undefined) navigate(back)
+    else navigate(-1)
   }
   if (home)
     return (
