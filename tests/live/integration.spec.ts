@@ -11,6 +11,11 @@ test('real Spring Boot session, catalog saves, QR, registration, restoration, ca
   await page.getByLabel('아이디', { exact: true }).fill('e2e-admin')
   await page.getByLabel('비밀번호', { exact: true }).fill('throwaway-e2e-password')
   await page.getByRole('button', { name: '로그인', exact: true }).click()
+  await expect(page).toHaveURL('/')
+  await page
+    .getByRole('navigation', { name: '주 메뉴' })
+    .getByRole('link', { name: '전체 보기' })
+    .click()
   await expect(page.getByRole('heading', { name: '관리자 메뉴' })).toBeVisible()
   const csrf = (await page.context().cookies()).find((c) => c.name === 'XSRF-TOKEN')!.value
   const post = async (path: string, data: unknown) => {
