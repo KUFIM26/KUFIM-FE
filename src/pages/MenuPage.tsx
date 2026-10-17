@@ -86,7 +86,7 @@ export default function MenuPage({ admin = false }: { admin?: boolean }) {
           ))}
         {admin && (
           <>
-            <p className="text-sm">{auth.account?.name}님</p>
+            <p className="text-sm items-center">{auth.account?.name}님</p>
             <button
               className="text-sm text-brand underline"
               disabled={action.pending}

@@ -82,7 +82,6 @@ export function NoticesPage({ admin = false }: { admin?: boolean }) {
           options={noticeCategories}
           value={category}
           onChange={(v) => setParams({ category: v }, { replace: true })}
-          compact
         />
         {rows.length ? (
           <NoticeRows items={rows} admin={admin} />
