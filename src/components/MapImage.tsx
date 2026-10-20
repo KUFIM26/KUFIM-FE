@@ -70,10 +70,11 @@ function MapCanvas({
   const gesture = useRef<{ view: View; center: Point; distance: number } | null>(null)
   const geometry = () => {
     const box = viewport.current!.getBoundingClientRect()
-    // The public map starts at the former 141% view, now labelled 100%.
-    const fit =
-      Math.min(box.width / floorplan.width, box.height / floorplan.height) *
-      (variant === 'map' ? 1.41 : 1)
+    // Public 100% fills the viewport; the picker starts with the entire floorplan visible.
+    const fit = (variant === 'map' ? Math.max : Math.min)(
+      box.width / floorplan.width,
+      box.height / floorplan.height,
+    )
     return { box, width: floorplan.width * fit, height: floorplan.height * fit }
   }
   const apply = (next: View) => {
