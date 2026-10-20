@@ -9,7 +9,7 @@ async function campusMap(page: Page) {
       json: {
         success: true,
         error: null,
-        data: { floorplan: { imageUrl: '/assets/map.svg', width: 190936, height: 139672 } },
+        data: { floorplan: { imageUrl: '/assets/map.svg', width: 218321, height: 223230 } },
       },
     }),
   )
@@ -43,12 +43,29 @@ test('campus SVG and booth anchor stay aligned through zoom and pan; dragging a 
   const pin = page.getByRole('link', { name: '테스트 부스 위치' })
   await expect(image).toHaveJSProperty('complete', true)
   await page.evaluate(() => document.fonts.ready)
+  const initialImage = (await image.boundingBox())!
+  const initialViewport = (await page
+    .getByRole('region', { name: '확대 가능한 축제 지도' })
+    .boundingBox())!
+  await expect(page.getByRole('button', { name: '지도 전체 보기' })).toHaveText('100%')
+  expect(initialImage.x).toBeLessThanOrEqual(initialViewport.x + 1)
+  expect(initialImage.y).toBeLessThanOrEqual(initialViewport.y + 1)
+  expect(initialImage.x + initialImage.width).toBeGreaterThanOrEqual(
+    initialViewport.x + initialViewport.width - 1,
+  )
+  expect(initialImage.y + initialImage.height).toBeGreaterThanOrEqual(
+    initialViewport.y + initialViewport.height - 1,
+  )
+  const intrinsic = await image.evaluate(
+    (el: HTMLImageElement) => el.naturalWidth / el.naturalHeight,
+  )
+  expect(initialImage.width / initialImage.height).toBeCloseTo(intrinsic, 2)
   const normal = (await pin.boundingBox())!
   for (const zoom of [1, 1.4, 1.96]) {
     if (zoom > 1) await page.getByRole('button', { name: '지도 확대', exact: true }).click()
     const box = (await image.boundingBox())!,
       marker = (await pin.boundingBox())!
-    expect(box.width / box.height).toBeCloseTo(190936 / 139672, 2)
+    expect(box.width / box.height).toBeCloseTo(218321 / 223230, 2)
     expect(marker.x + marker.width / 2).toBeCloseTo(box.x + box.width * 0.4, 0)
     expect(marker.y + marker.height).toBeCloseTo(box.y + box.height * 0.5, 0)
     expect(marker.width).toBeCloseTo(normal.width, 0)
@@ -56,12 +73,12 @@ test('campus SVG and booth anchor stay aligned through zoom and pan; dragging a 
   const before = (await pin.boundingBox())!
   await page.mouse.move(before.x + before.width / 2, before.y + before.height / 2)
   await page.mouse.down()
-  await page.mouse.move(before.x + before.width / 2 + 45, before.y + before.height / 2, {
+  await page.mouse.move(before.x + before.width / 2 - 45, before.y + before.height / 2, {
     steps: 6,
   })
   await page.mouse.up()
   await expect(page).toHaveURL(/\/map$/)
-  expect((await pin.boundingBox())!.x).toBeGreaterThan(before.x + 30)
+  expect((await pin.boundingBox())!.x).toBeLessThan(before.x - 30)
   await page.getByRole('button', { name: '지도 전체 보기' }).click()
   await expect(page.getByRole('button', { name: '지도 축소', exact: true })).toBeDisabled()
   const viewport = page.getByRole('region', { name: '확대 가능한 축제 지도' })
