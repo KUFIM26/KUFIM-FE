@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import { useFestival } from '../app/festival-context'
 import type { Floorplan } from '../apis/type'
 import type { Booth } from '../data/models'
+import { useImageSize } from '../hooks/useImageSize'
 
 type Point = { x: number; y: number }
 type View = Point & { scale: number }
@@ -19,8 +20,11 @@ const distance = (a: Point, b: Point) => Math.hypot(a.x - b.x, a.y - b.y)
 const midpoint = (a: Point, b: Point) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 })
 
 export function MapImage({ className = '', variant = 'map', ...props }: Props) {
-  const { floorplan } = useFestival()
-  if (!floorplan)
+  const { floorplan: stored } = useFestival()
+  // Lay the map out by the image file itself, so a replaced image never gets
+  // stretched to stale width/height values saved with the floorplan.
+  const size = useImageSize(stored?.imageUrl, stored)
+  if (!stored)
     return (
       <div
         className={`flex items-center justify-center bg-[#e8eee9] p-5 text-sm text-muted ${className}`}
@@ -28,6 +32,16 @@ export function MapImage({ className = '', variant = 'map', ...props }: Props) {
         등록된 지도가 없습니다.
       </div>
     )
+  if (!size)
+    return (
+      <div
+        className={`flex items-center justify-center bg-[#f4f7f1] p-5 text-sm text-muted ${className}`}
+        data-map-variant={variant}
+      >
+        지도를 불러오는 중입니다.
+      </div>
+    )
+  const floorplan = { ...stored, width: size.width, height: size.height }
   if (variant === 'mini')
     return (
       <div
@@ -70,11 +84,8 @@ function MapCanvas({
   const gesture = useRef<{ view: View; center: Point; distance: number } | null>(null)
   const geometry = () => {
     const box = viewport.current!.getBoundingClientRect()
-    // Public 100% fills the viewport; the picker starts with the entire floorplan visible.
-    const fit = (variant === 'map' ? Math.max : Math.min)(
-      box.width / floorplan.width,
-      box.height / floorplan.height,
-    )
+    // 100% covers the whole viewport (both width and height filled); overflow is panned.
+    const fit = Math.max(box.width / floorplan.width, box.height / floorplan.height)
     return { box, width: floorplan.width * fit, height: floorplan.height * fit }
   }
   const apply = (next: View) => {
@@ -163,7 +174,7 @@ function MapCanvas({
         role="region"
         aria-label={onSelect ? '지도에서 위치 선택' : '확대 가능한 축제 지도'}
         tabIndex={0}
-        className={`absolute inset-0 touch-none select-none outline-offset-[-3px] ${variant === 'map' ? 'bottom-[132px]' : ''}`}
+        className="absolute inset-0 touch-none select-none outline-offset-[-3px]"
         style={{ cursor: onSelect ? 'crosshair' : 'grab' }}
         onPointerDown={(event) => {
           if (event.pointerType === 'mouse' && event.button !== 0) return
