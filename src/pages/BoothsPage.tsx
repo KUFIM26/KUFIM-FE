@@ -121,8 +121,8 @@ export function BoothDetailPage() {
           <h2 className="font-bold">{booth.period === 'facility' ? '시설' : '부스'} 소개</h2>
           <p className="mt-2 text-xs">{booth.description}</p>
         </Card>
-        <Link to="/map" aria-label="축제 지도에서 위치 보기">
-          <MapImage variant="mini" className="h-50 rounded-xl" />
+        <Link to="/map" aria-label="축제 지도에서 위치 보기" className="block">
+          <MapImage variant="mini" className="h-[260px] rounded-xl" focus={booth.position} />
         </Link>
         {booth.waitingEnabled && (
           <>
