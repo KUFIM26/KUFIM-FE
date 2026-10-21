@@ -463,7 +463,7 @@ export function BoothFormPage() {
           )}
           <button
             type="button"
-            className="relative overflow-hidden rounded-xl"
+            className="relative block w-full overflow-hidden rounded-xl"
             disabled={!floorplan}
             aria-label="지도에서 위치 지정"
             onClick={() =>
@@ -476,7 +476,7 @@ export function BoothFormPage() {
               )
             }
           >
-            <MapImage variant="mini" className="h-[200px]" />
+            <MapImage variant="mini" className="h-[260px]" focus={position} />
             {position && (
               <span className="absolute right-2 bottom-2 rounded-full bg-brand px-3 py-1 text-xs text-white">
                 위치 지정 완료

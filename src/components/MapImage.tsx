@@ -14,6 +14,8 @@ type Props = {
   markers?: Booth[]
   selectedPoint?: Point | null
   onSelect?: (point: Point) => void
+  /** Mini preview: the point (percent) to keep centered and mark. Defaults to the map centre. */
+  focus?: Point | null
 }
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value))
 const distance = (a: Point, b: Point) => Math.hypot(a.x - b.x, a.y - b.y)
@@ -42,21 +44,51 @@ export function MapImage({ className = '', variant = 'map', ...props }: Props) {
       </div>
     )
   const floorplan = { ...stored, width: size.width, height: size.height }
-  if (variant === 'mini')
+  if (variant === 'mini') {
+    // Cover the box (full width, overflow cropped) and slide the map so the focus point
+    // sits as close to the centre as the map edges allow.
+    const focus = props.focus ?? { x: 50, y: 50 }
+    const ratio = floorplan.height / floorplan.width
+    const width = `max(100cqw, calc(100cqh / ${ratio}))`
+    const height = `calc(${width} * ${ratio})`
     return (
       <div
-        className={`relative overflow-hidden bg-white ${className}`}
+        className={`relative w-full overflow-hidden bg-[#f4f7f1] ${className}`}
         data-map-variant={variant}
-        style={{ aspectRatio: `${floorplan.width}/${floorplan.height}` }}
+        style={{ containerType: 'size' }}
       >
-        <img
-          src={floorplan.imageUrl}
-          alt="축제 지도"
-          draggable={false}
-          className="block h-full w-full object-contain"
-        />
+        <div
+          className="absolute"
+          data-map-content
+          style={{
+            width,
+            height,
+            left: `clamp(calc(100cqw - ${width}), calc(50cqw - ${width} * ${focus.x / 100}), 0px)`,
+            top: `clamp(calc(100cqh - ${height}), calc(50cqh - ${height} * ${focus.y / 100}), 0px)`,
+          }}
+        >
+          <img
+            src={floorplan.imageUrl}
+            alt="축제 지도"
+            draggable={false}
+            className="block h-full w-full"
+          />
+          {props.focus && (
+            <span
+              aria-label="지정된 위치"
+              className="absolute"
+              style={{ left: `${props.focus.x}%`, top: `${props.focus.y}%` }}
+            >
+              <span className="absolute -translate-x-1/2 -translate-y-full text-brand">
+                <span className="block size-5 rounded-full border-[5px] border-white bg-brand shadow" />
+                <span className="mx-auto block size-2 rotate-45 bg-brand -mt-1" />
+              </span>
+            </span>
+          )}
+        </div>
       </div>
     )
+  }
   return (
     <MapCanvas
       key={`${floorplan.imageUrl}:${floorplan.width}:${floorplan.height}`}
