@@ -70,7 +70,7 @@ export default function HomePage() {
             <Link
               key={link.to}
               to={link.to}
-              className="card flex h-18 min-w-0 flex-col items-center justify-center gap-2 shadow-nav"
+              className="card flex h-18 min-w-0 flex-col items-center justify-center gap-2 shadow-card"
             >
               <span className="flex h-5.5 items-center">
                 <Asset src={link.icon} />
