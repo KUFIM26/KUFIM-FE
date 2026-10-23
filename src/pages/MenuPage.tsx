@@ -50,6 +50,28 @@ export default function MenuPage({ admin = false }: { admin?: boolean }) {
   return (
     <Page title={admin ? '관리자 메뉴' : '전체 메뉴'} plain nav>
       <div className={`page-pad !pt-6 ${admin ? 'gap-5' : '!gap-3'}`}>
+        {admin && (
+          <Card className="flex items-center gap-3 p-4">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[#e8e8e8]">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="#9a9a9a" aria-hidden="true">
+                <circle cx="12" cy="8" r="4" />
+                <path d="M4 20c0-3.3 3.6-5.5 8-5.5s8 2.2 8 5.5v1H4Z" />
+              </svg>
+            </span>
+            <div>
+              <p className="text-sm font-bold">{auth.account?.name || '관리자'} 님</p>
+              <p className="mt-1 text-xs font-medium text-[#6b6b6b]">안녕하세요.</p>
+            </div>
+            <button
+              className="ml-auto shrink-0 rounded-full bg-[#1d8a45] px-3.5 py-1.5 text-xs font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+              disabled={action.pending}
+              onClick={() => void action.run(auth.logout)}
+            >
+              로그아웃
+            </button>
+          </Card>
+        )}
+        {admin && <RequestState error={action.error} />}
         <Card className="flex items-center gap-3 p-4">
           <div className="flex size-10 shrink-0 flex-col items-center justify-center rounded-xl bg-[#1c8944] text-xs font-bold text-white">
             <span>KU</span>
@@ -84,19 +106,6 @@ export default function MenuPage({ admin = false }: { admin?: boolean }) {
               </Card>
             </section>
           ))}
-        {admin && (
-          <>
-            <p className="text-sm items-center">{auth.account?.name}님</p>
-            <button
-              className="text-sm text-brand underline"
-              disabled={action.pending}
-              onClick={() => void action.run(auth.logout)}
-            >
-              로그아웃
-            </button>
-            <RequestState error={action.error} />
-          </>
-        )}
       </div>
     </Page>
   )
