@@ -17,7 +17,7 @@ import type { FormEvent, ReactNode } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useFestival } from '../app/festival-context'
 import { BottomActions, Page } from '../components/layout'
-import { Asset, Button, Chips, SectionTitle, Tabs } from '../components/ui'
+import { Asset, Button, Chips, ConfirmDialog, SectionTitle, Tabs } from '../components/ui'
 import { FacilityFilters, MapImage, PerformanceFilters } from '../components/festival'
 import { boothCategories } from '../data/models'
 import type { Booth } from '../data/models'
@@ -339,8 +339,19 @@ export function BoothFormPage() {
   const [position, setPosition] = useState<{ x: number; y: number } | null>(item?.position ?? null)
   const facility = period === 'facility'
   const pickerOpen = params.get('location') === 'pick'
+  const [confirmDelete, setConfirmDelete] = useState(false)
   const navigate = useNavigate()
   if (id && !item) return <NotFoundPage />
+  const remove = () => {
+    setConfirmDelete(false)
+    void action.run(async () => {
+      if (!item) return
+      if (facility) await useFacilityApi.delete(item.apiId)
+      else await useBoothApi.delete(item.apiId)
+      await refresh()
+      navigate(`/admin/booths?period=${period}`)
+    })
+  }
   const closePicker = () =>
     setParams(
       (previous) => {
@@ -484,6 +495,16 @@ export function BoothFormPage() {
             )}
           </button>
         </section>
+        {item && (
+          <Button
+            tone="red"
+            className="!bg-[#ffa3a3] !text-[#3b0500]"
+            disabled={action.pending}
+            onClick={() => setConfirmDelete(true)}
+          >
+            {facility ? '시설 삭제하기' : '부스 삭제하기'}
+          </Button>
+        )}
       </form>
       <RequestState error={action.error} />
       <SaveBar
@@ -491,6 +512,19 @@ export function BoothFormPage() {
         form="booth-form"
         cancel={() => navigate('/admin/booths')}
       />
+      <ConfirmDialog
+        open={confirmDelete}
+        admin
+        title={facility ? '시설 삭제' : '부스 삭제'}
+        confirmLabel="삭제하기"
+        cancelLabel="취소"
+        onClose={() => setConfirmDelete(false)}
+        onConfirm={remove}
+      >
+        {item?.name ? `'${item.name}'` : '이 항목'}을(를) 삭제할까요?
+        <br />
+        삭제한 내용은 되돌릴 수 없습니다.
+      </ConfirmDialog>
       <LocationPicker
         key={pickerOpen ? 'open' : 'closed'}
         open={params.get('location') === 'pick'}

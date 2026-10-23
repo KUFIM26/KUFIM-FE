@@ -52,7 +52,7 @@ export default function HomePage() {
         )}
         <section className="green-gradient flex flex-col gap-2 rounded-xl p-3.5 shadow-card">
           <FestivalMeta />
-          <h2 className="text-base font-bold text-white">축제 분위기를 만끽하세요!</h2>
+          <h2 className="text-base font-bold text-white">건대항쟁의 순간을 직접 체험하세요!</h2>
           <Stats
             items={[
               { label: '현재 운영 부스', value: `${festival?.summary.operatingBoothCount ?? 0}개` },
