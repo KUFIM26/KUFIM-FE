@@ -1,16 +1,18 @@
 import { FestivalProvider } from '../app/FestivalProvider'
 import { FestivalContext } from '../app/festival-context'
-import { useContext, useEffect } from 'react'
+import { useContext, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
-import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { Link, Outlet, useLocation, useMatches, useNavigate } from 'react-router-dom'
 import { Asset } from './ui'
 import { figmaAssets as assets } from '../data/figma-assets'
-import { useAuth } from '../app/auth-context'
-import { useAction } from '../hooks/useResource'
-import { RequestState } from './RequestState'
+import { BottomNav } from './BottomNav'
+import { BottomNavActionContext } from './bottom-nav-context'
+import { createPortal } from 'react-dom'
 
 export function RootLayout() {
   const { pathname } = useLocation()
+  const [actionHost, setActionHost] = useState<HTMLDivElement | null>(null)
+  const nav = useMatches().some((match) => (match.handle as { bottomNav?: boolean })?.bottomNav)
   useEffect(() => {
     window.scrollTo(0, 0)
   }, [pathname])
@@ -22,9 +24,12 @@ export function RootLayout() {
       >
         본문으로 건너뛰기
       </a>
-      <FestivalProvider key={pathname.startsWith('/admin') ? 'admin' : 'public'}>
-        <Outlet />
-      </FestivalProvider>
+      <BottomNavActionContext.Provider value={actionHost}>
+        <FestivalProvider key={pathname.startsWith('/admin') ? 'admin' : 'public'}>
+          <Outlet />
+        </FestivalProvider>
+        <BottomNav visible={nav} actionRef={setActionHost} />
+      </BottomNavActionContext.Provider>
     </div>
   )
 }
@@ -110,8 +115,10 @@ export function Page({
   className?: string
   backIcon?: string
 }) {
+  const actionHost = useContext(BottomNavActionContext)
   return (
     <>
+      {nav && navAction && actionHost && createPortal(navAction, actionHost)}
       <Header
         title={title}
         back={back}
@@ -122,7 +129,7 @@ export function Page({
       />
       <main
         id="main-content"
-        className={`page-surface ${nav ? 'pb-[56px]' : ''} ${className}`}
+        className={`page-surface ${nav ? 'page-with-nav' : ''} ${className}`}
         style={
           home
             ? {
@@ -135,91 +142,7 @@ export function Page({
       >
         {children}
       </main>
-      {nav && <BottomNav action={navAction} />}
     </>
-  )
-}
-function BottomNav({ action }: { action?: ReactNode }) {
-  const { account, checkSession } = useAuth()
-  const navigate = useNavigate()
-  const menuAction = useAction()
-  const openMenu = () =>
-    menuAction.run(async () => {
-      await checkSession((session) => navigate(session ? '/admin' : '/menu'))
-    })
-  const links = [
-    {
-      to: '/',
-      label: '홈',
-      normal: assets['94:255'].imgVector1,
-      active: assets['17:303'].imgVector,
-    },
-    {
-      to: '/map',
-      label: '지도',
-      normal: assets['17:303'].imgGroup2,
-      active: assets['53:1227'].imgGroup2,
-    },
-    {
-      to: '/waiting',
-      label: '웨이팅',
-      normal: assets['17:303'].imgVector1,
-      active: assets['75:2'].imgVector4,
-    },
-    {
-      to: account ? '/admin' : '/menu',
-      label: '전체 보기',
-      menu: true,
-      normal: assets['17:303'].imgFrame1597881159,
-      active: assets['94:255'].imgFrame1597881159,
-    },
-  ]
-  return (
-    <div
-      className="pointer-events-none fixed left-1/2 z-40 flex w-[calc(100%-32px)] max-w-[361px] -translate-x-1/2 flex-col items-center gap-[15px]"
-      style={{ bottom: 'max(16px, env(safe-area-inset-bottom))' }}
-    >
-      {action && <div className="pointer-events-auto">{action}</div>}
-      {menuAction.error && (
-        <div className="pointer-events-auto rounded-xl bg-white shadow-card">
-          <RequestState error={menuAction.error} retry={() => void openMenu()} />
-        </div>
-      )}
-      <nav
-        aria-label="주 메뉴"
-        className="pointer-events-auto flex w-full justify-between rounded-[15px] bg-white px-[23px] py-1.5 shadow-nav"
-      >
-        {links.map((link) => (
-          <NavLink
-            key={link.to}
-            to={link.to}
-            end={link.to === '/'}
-            aria-disabled={link.menu && menuAction.pending ? true : undefined}
-            aria-busy={link.menu && menuAction.pending ? true : undefined}
-            onClick={
-              link.menu
-                ? (event) => {
-                    event.preventDefault()
-                    void openMenu()
-                  }
-                : undefined
-            }
-            className={({ isActive }) =>
-              `flex w-[44.529px] flex-col items-center text-[10.687px] font-semibold ${isActive ? 'text-brand' : 'text-black'}`
-            }
-          >
-            {({ isActive }) => (
-              <>
-                <span className="flex h-[35.623px] items-center justify-center">
-                  <Asset src={isActive ? link.active : link.normal} />
-                </span>
-                <span>{link.label}</span>
-              </>
-            )}
-          </NavLink>
-        ))}
-      </nav>
-    </div>
   )
 }
 export function BottomActions({ children }: { children: ReactNode }) {

@@ -1,5 +1,11 @@
 // Original assets exported from the supplied KUFIM Figma file.
 export const figmaAssets = {
+  '221:412': {
+    home: '/assets/figma/tab-bar/home.svg',
+    map: '/assets/figma/tab-bar/map.svg',
+    waiting: '/assets/figma/tab-bar/waiting.svg',
+    menu: '/assets/figma/tab-bar/menu.svg',
+  },
   '63:404': {
     imgRectangle15: '/assets/figma/63-404-5c849.svg',
     imgVector: '/assets/figma/63-404-87cdd.svg',
