@@ -96,6 +96,8 @@ export async function mockApi(
     status: 'OPEN' as AcceptingStatus,
     minutes: 5,
     failSave: false,
+    failDelete: false,
+    deletions: [] as string[],
     qrIssued: true,
     qrIssues: 0,
     failRegisterOnce: false,
@@ -194,6 +196,13 @@ export async function mockApi(
       return ok(route, state.performances)
     if (path === '/performances/9') return ok(route, state.performances[0])
     if (path === '/notices') return ok(route, state.notices)
+    if (method === 'DELETE' && (path === '/admin/notices/4' || path === '/admin/performances/9')) {
+      state.deletions.push(path)
+      if (state.failDelete) return fail(route, 409, '삭제 실패 테스트')
+      if (path === '/admin/notices/4') state.notices = []
+      else state.performances = []
+      return route.fulfill({ status: 204 })
+    }
     if (
       (path === '/admin/notices' && method === 'POST') ||
       (path.startsWith('/admin/notices/') && method === 'PATCH')
