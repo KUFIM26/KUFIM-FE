@@ -95,8 +95,18 @@ export function NoticeFormPage() {
   const action = useAction()
   const item = notices.find((n) => n.id === id)
   const [category, setCategory] = useState(item?.category || '긴급')
+  const [confirmDelete, setConfirmDelete] = useState(false)
   const navigate = useNavigate()
   if (id && !item) return <NotFoundPage />
+  const remove = () => {
+    setConfirmDelete(false)
+    void action.run(async () => {
+      if (!item) return
+      await useNoticeApi.delete(Number(item.id))
+      await refresh()
+      navigate('/admin/notices')
+    })
+  }
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const data = new FormData(event.currentTarget)
@@ -142,6 +152,16 @@ export function NoticeFormPage() {
             placeholder="공지 내용을 입력하세요."
           />
         </Field>
+        {item && (
+          <Button
+            tone="red"
+            className="!bg-[#ffa3a3] !text-[#3b0500]"
+            disabled={action.pending}
+            onClick={() => setConfirmDelete(true)}
+          >
+            공지사항 삭제하기
+          </Button>
+        )}
       </form>
       <RequestState error={action.error} />
       <SaveBar
@@ -149,6 +169,19 @@ export function NoticeFormPage() {
         form="notice-form"
         cancel={() => navigate('/admin/notices')}
       />
+      <ConfirmDialog
+        open={confirmDelete}
+        admin
+        title="공지사항 삭제"
+        confirmLabel="삭제하기"
+        cancelLabel="취소"
+        onClose={() => setConfirmDelete(false)}
+        onConfirm={remove}
+      >
+        {item?.title ? `'${item.title}'` : '이 공지사항'}을(를) 삭제할까요?
+        <br />
+        삭제한 내용은 되돌릴 수 없습니다.
+      </ConfirmDialog>
     </Page>
   )
 }
@@ -164,8 +197,18 @@ export function PerformanceFormPage() {
   )
   const [kind, setKind] = useState(item?.kind || '밴드')
   const [timeError, setTimeError] = useState('')
+  const [confirmDelete, setConfirmDelete] = useState(false)
   const navigate = useNavigate()
   if (id && !item) return <NotFoundPage />
+  const remove = () => {
+    setConfirmDelete(false)
+    void action.run(async () => {
+      if (!item) return
+      await usePerformanceApi.delete(item.apiId)
+      await refresh()
+      navigate(`/admin/performances?day=${day}&stage=${stage}`)
+    })
+  }
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const data = new FormData(event.currentTarget)
@@ -268,6 +311,16 @@ export function PerformanceFormPage() {
             placeholder="셋리스트를 입력하세요."
           />
         </Field>
+        {item && (
+          <Button
+            tone="red"
+            className="!bg-[#ffa3a3] !text-[#3b0500]"
+            disabled={action.pending}
+            onClick={() => setConfirmDelete(true)}
+          >
+            무대 프로그램 삭제하기
+          </Button>
+        )}
       </form>
       <RequestState error={action.error} />
       <SaveBar
@@ -275,6 +328,19 @@ export function PerformanceFormPage() {
         form="performance-form"
         cancel={() => navigate('/admin/performances')}
       />
+      <ConfirmDialog
+        open={confirmDelete}
+        admin
+        title="무대 프로그램 삭제"
+        confirmLabel="삭제하기"
+        cancelLabel="취소"
+        onClose={() => setConfirmDelete(false)}
+        onConfirm={remove}
+      >
+        {item?.name ? `'${item.name}'` : '이 무대 프로그램'}을(를) 삭제할까요?
+        <br />
+        삭제한 내용은 되돌릴 수 없습니다.
+      </ConfirmDialog>
     </Page>
   )
 }
