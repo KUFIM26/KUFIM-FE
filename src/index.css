@@ -9,8 +9,6 @@
   --color-muted: #494949;
   --color-danger: #e25151;
   --shadow-card: 2px 2px 1px rgb(0 0 0 / 10%);
-  --shadow-nav:
-    1.781px 1.781px 0.891px rgb(0 0 0 / 10%), -1.781px -1.781px 0.891px rgb(0 0 0 / 10%);
   --text-xs--line-height: normal;
   --text-sm--line-height: normal;
   --text-base--line-height: normal;
@@ -85,6 +83,72 @@
       center -4px,
       center top;
     box-shadow: 0 -1px 1px rgb(0 0 0 / 20%);
+  }
+  .page-with-nav {
+    padding-bottom: calc(90px + env(safe-area-inset-bottom, 0px));
+  }
+  .bottom-nav-container {
+    @apply pointer-events-none fixed left-1/2 z-40 flex -translate-x-1/2 flex-col items-center gap-[15px];
+    width: min(360px, calc(100% - 32px));
+    bottom: max(14px, env(safe-area-inset-bottom, 0px));
+  }
+  .bottom-nav-container[hidden] {
+    display: none;
+  }
+  .bottom-nav {
+    @apply pointer-events-auto relative flex w-full rounded-full;
+    isolation: isolate;
+    padding: 4px 6px;
+  }
+  .bottom-nav-material {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    border-radius: inherit;
+    background: rgb(245 248 246 / 32%);
+    box-shadow: 0 4px 20px rgb(0 0 0 / 6%);
+  }
+  .bottom-nav-selection {
+    position: absolute;
+    top: 4px;
+    left: 0;
+    height: 54px;
+    border-radius: 100px;
+    pointer-events: none;
+    background: rgb(17 102 51 / 7%);
+    will-change: transform;
+  }
+  .bottom-nav-lens {
+    border-radius: inherit;
+    background: rgb(255 255 255 / 18%);
+  }
+  .bottom-nav-tab {
+    @apply relative flex min-w-0 flex-1 flex-col items-center justify-center rounded-full;
+    height: 54px;
+    margin-right: -8px;
+    gap: 0.5px;
+    padding: 6px 8px 7px;
+    color: #1a1a1a;
+    font-size: 10px;
+    line-height: 12px;
+    font-weight: 600;
+    transition: color 160ms ease;
+  }
+  .bottom-nav-tab:last-child {
+    margin-right: 0;
+  }
+  .bottom-nav-tab[aria-current='page'] {
+    color: var(--color-brand);
+  }
+  .bottom-nav-icon {
+    display: block;
+    flex: none;
+    height: 28px;
+    background: currentColor;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-position: center;
   }
   .page-pad {
     @apply flex flex-col gap-5 px-5 pt-5 pb-7;
@@ -231,5 +295,17 @@
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .bottom-nav-material {
+    background: #f5f8f6;
+  }
+  .bottom-nav-material,
+  .bottom-nav-lens {
+    filter: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
   }
 }
