@@ -6,6 +6,7 @@ import { useBoothApi } from '../hooks/useBoothApi'
 import { useFacilityApi } from '../hooks/useFacilityApi'
 import { usePerformanceApi } from '../hooks/usePerformanceApi'
 import { useNoticeApi } from '../hooks/useNoticeApi'
+import { useNotificationApi } from '../hooks/useNotificationApi'
 import { pollEvery, useRealtimeConnected, useTopic, useTopics } from '../apis/realtime'
 import { isNotFound } from '../apis/axios'
 import { boothView, facilityView, noticeView, performanceView } from '../apis/adapters'
@@ -68,19 +69,29 @@ export function FestivalProvider({
   )
   const boothResource = useResource(boothLoader, pollEvery(live, 15000))
   const noticeResource = useResource(noticeLoader, pollEvery(live, 15000))
+  // The home bell badge follows the server unread count; admins have no visitor inbox.
+  const unreadLoader = useCallback(
+    async () => (admin ? 0 : (await useNotificationApi.findAll(0, 1)).data.data.unreadCount),
+    [admin],
+  )
+  const unreadResource = useResource(unreadLoader, pollEvery(live, 15000))
   useTopics(
     (boothResource.data ?? [])
       .filter((b) => b.waitingEnabled)
       .map((b) => `/topic/booth/${b.id}/waiting`),
     boothResource.refresh,
   )
-  useTopic('/topic/notice', noticeResource.refresh)
   const { refresh: refreshCatalog } = resource
   const { refresh: refreshBooths } = boothResource
   const { refresh: refreshNotices } = noticeResource
+  const { refresh: refreshUnread } = unreadResource
+  const refreshNoticeFeed = useCallback(async () => {
+    await Promise.all([refreshNotices(), refreshUnread()])
+  }, [refreshNotices, refreshUnread])
+  useTopic('/topic/notice', refreshNoticeFeed)
   const refresh = useCallback(async () => {
-    await Promise.all([refreshCatalog(), refreshBooths(), refreshNotices()])
-  }, [refreshCatalog, refreshBooths, refreshNotices])
+    await Promise.all([refreshCatalog(), refreshBooths(), refreshNoticeFeed()])
+  }, [refreshCatalog, refreshBooths, refreshNoticeFeed])
   const error = resource.error || boothResource.error || noticeResource.error
   const loading = resource.loading || boothResource.loading || noticeResource.loading
   if (!resource.data || !boothResource.data || !noticeResource.data) {
@@ -93,6 +104,7 @@ export function FestivalProvider({
         ...resource.data,
         booths: [...boothResource.data, ...resource.data.facilities],
         notices: noticeResource.data,
+        unreadNotifications: unreadResource.data ?? 0,
         refresh,
       }}
     >

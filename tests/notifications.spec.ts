@@ -141,3 +141,21 @@ test('catalog failure and retry keep the notification header and surface', async
   await expect(page.getByRole('list', { name: '알림 목록' })).toBeVisible()
   await expect(page.getByRole('alert')).toHaveCount(0)
 })
+
+test('home bell shows the unread dot only while unread notifications remain', async ({ page }) => {
+  const state = await mockApi(page)
+  await page.goto('/')
+  const bell = page.getByRole('link', { name: '알림함', exact: true })
+  await expect(bell).toHaveAttribute('data-unread', 'true')
+  await bell.click()
+  await page.getByRole('button', { name: '전체 읽음' }).click()
+  await expect(page.getByLabel('읽지 않음', { exact: true })).toHaveCount(0)
+  expect(state.notifications.every((n) => n.readAt)).toBe(true)
+  await page.getByRole('button', { name: '뒤로 가기' }).click()
+  await expect(page).toHaveURL('/')
+  await expect(bell).not.toHaveAttribute('data-unread', 'true')
+
+  await page.reload()
+  await expect(bell).toBeVisible()
+  await expect(bell).not.toHaveAttribute('data-unread', 'true')
+})
