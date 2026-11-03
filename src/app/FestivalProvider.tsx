@@ -16,9 +16,11 @@ import { useAuth } from './auth-context'
 export function FestivalProvider({
   children,
   admin = false,
+  fallback,
 }: {
   children: ReactNode
   admin?: boolean
+  fallback?: (state: { loading: boolean; error: string; retry: () => void }) => ReactNode
 }) {
   const { account } = useAuth()
   const superAdmin = admin && account?.role === 'SUPER_ADMIN'
@@ -81,8 +83,10 @@ export function FestivalProvider({
   }, [refreshCatalog, refreshBooths, refreshNotices])
   const error = resource.error || boothResource.error || noticeResource.error
   const loading = resource.loading || boothResource.loading || noticeResource.loading
-  if (!resource.data || !boothResource.data || !noticeResource.data)
-    return <RequestState loading={loading} error={error} retry={() => void refresh()} />
+  if (!resource.data || !boothResource.data || !noticeResource.data) {
+    const state = { loading, error, retry: () => void refresh() }
+    return fallback ? fallback(state) : <RequestState {...state} />
+  }
   return (
     <FestivalContext.Provider
       value={{

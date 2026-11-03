@@ -8,6 +8,7 @@ import { figmaAssets as assets } from '../data/figma-assets'
 import { BottomNav } from './BottomNav'
 import { BottomNavActionContext } from './bottom-nav-context'
 import { createPortal } from 'react-dom'
+import { RequestState } from './RequestState'
 
 export function RootLayout() {
   const { pathname } = useLocation()
@@ -25,7 +26,20 @@ export function RootLayout() {
         본문으로 건너뛰기
       </a>
       <BottomNavActionContext.Provider value={actionHost}>
-        <FestivalProvider key={pathname.startsWith('/admin') ? 'admin' : 'public'}>
+        <FestivalProvider
+          key={pathname.startsWith('/admin') ? 'admin' : 'public'}
+          fallback={
+            pathname === '/notifications'
+              ? (state) => (
+                  <NotificationsLayout readAllDisabled>
+                    <div className="page-pad !gap-3">
+                      <RequestState {...state} />
+                    </div>
+                  </NotificationsLayout>
+                )
+              : undefined
+          }
+        >
           <Outlet />
         </FestivalProvider>
         <BottomNav visible={nav} actionRef={setActionHost} />
@@ -147,4 +161,34 @@ export function Page({
 }
 export function BottomActions({ children }: { children: ReactNode }) {
   return <div className="bottom-actions">{children}</div>
+}
+
+// Share the same frame before and after catalog loading, including on a direct reload.
+export function NotificationsLayout({
+  children,
+  readAllDisabled,
+  onReadAll,
+}: {
+  children: ReactNode
+  readAllDisabled: boolean
+  onReadAll?: () => void
+}) {
+  return (
+    <Page
+      title="알림함"
+      back="/"
+      className="notifications-page"
+      action={
+        <button
+          disabled={readAllDisabled}
+          className="text-xs font-bold text-brand underline disabled:opacity-50"
+          onClick={onReadAll}
+        >
+          전체 읽음
+        </button>
+      }
+    >
+      {children}
+    </Page>
+  )
 }

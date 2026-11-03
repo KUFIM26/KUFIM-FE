@@ -6,7 +6,7 @@ import { useCallback, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useFestival } from '../app/festival-context'
-import { Page, BottomActions } from '../components/layout'
+import { Page, BottomActions, NotificationsLayout } from '../components/layout'
 import { Asset, Card, Chips, EmptyState } from '../components/ui'
 import { EmergencyBanner } from '../components/festival'
 import { figmaAssets as assets } from '../data/figma-assets'
@@ -141,23 +141,14 @@ export function NotificationsPage() {
   const { notices, refresh } = useFestival()
   const navigate = useNavigate()
   return (
-    <Page
-      title="알림함"
-      className="-mt-1.5 min-h-[calc(100dvh-62px)] bg-[url('/assets/figma/47-1047-5c849.svg'),linear-gradient(white,white)]"
-      action={
-        <button
-          disabled={action.pending || !resource.data?.unreadCount}
-          className="text-xs font-bold text-brand underline disabled:opacity-50"
-          onClick={() =>
-            void action.run(async () => {
-              await useNotificationApi.readAll()
-              await resource.refresh()
-              void refresh()
-            })
-          }
-        >
-          전체 읽음
-        </button>
+    <NotificationsLayout
+      readAllDisabled={action.pending || !resource.data?.unreadCount}
+      onReadAll={() =>
+        void action.run(async () => {
+          await useNotificationApi.readAll()
+          await resource.refresh()
+          void refresh()
+        })
       }
     >
       <div className="page-pad !gap-3">
@@ -256,6 +247,6 @@ export function NotificationsPage() {
           </div>
         )}
       </div>
-    </Page>
+    </NotificationsLayout>
   )
 }
