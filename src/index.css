@@ -84,6 +84,11 @@
       center top;
     box-shadow: 0 -1px 1px rgb(0 0 0 / 20%);
   }
+  .notifications-page {
+    margin-top: -6px;
+    min-height: calc(100dvh - 62px);
+    background-image: url('/assets/figma/47-1047-5c849.svg'), linear-gradient(white, white);
+  }
   .page-with-nav {
     padding-bottom: calc(90px + env(safe-area-inset-bottom, 0px));
   }

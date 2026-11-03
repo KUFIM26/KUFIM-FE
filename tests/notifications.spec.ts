@@ -67,3 +67,77 @@ test('failed read keeps the notification unread and stays on the list', async ({
   await expect(page).toHaveURL(/notifications$/)
   await expect(page.getByLabel('읽지 않음', { exact: true })).toHaveCount(1)
 })
+
+test('direct entry and reload keep the Figma notification frame while the catalog loads', async ({
+  page,
+}) => {
+  await mockApi(page)
+  let release!: () => void
+  let gate = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  await page.route('**/api/v1/festival', async (route) => {
+    await gate
+    await route.fallback()
+  })
+  await page.goto('/notifications')
+  const heading = page.getByRole('heading', { name: '알림함', exact: true })
+  const main = page.locator('#main-content')
+  const frame = () =>
+    main.evaluate((element) => {
+      const box = element.getBoundingClientRect()
+      const style = getComputedStyle(element)
+      return {
+        y: box.y,
+        width: box.width,
+        minHeight: style.minHeight,
+        background: style.backgroundImage,
+      }
+    })
+  await expect(heading).toBeVisible()
+  await expect(page.getByRole('button', { name: '전체 읽음' })).toBeDisabled()
+  await expect(page.getByText('불러오는 중…')).toBeVisible()
+  const initial = await frame()
+  expect(initial.y).toBe(62)
+  expect(initial.width).toBe(393)
+  release()
+  await expect(page.getByRole('list', { name: '알림 목록' })).toBeVisible()
+  expect(await frame()).toEqual(initial)
+  await page.evaluate(() => document.fonts.ready)
+  const direct = await page.screenshot()
+
+  gate = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  await page.reload()
+  await expect(heading).toBeVisible()
+  await expect(page.getByText('불러오는 중…')).toBeVisible()
+  expect(await frame()).toEqual(initial)
+  release()
+  await expect(page.getByRole('list', { name: '알림 목록' })).toBeVisible()
+  await page.evaluate(() => document.fonts.ready)
+  expect(await page.screenshot()).toEqual(direct)
+
+  // A direct link must return home even without a prior in-app history entry.
+  await page.getByRole('button', { name: '뒤로 가기' }).click()
+  await expect(page).toHaveURL('/')
+  await page.getByRole('link', { name: '알림함', exact: true }).click()
+  await expect(page.getByRole('list', { name: '알림 목록' })).toBeVisible()
+  expect(await frame()).toEqual(initial)
+  await page.evaluate(() => document.fonts.ready)
+  expect(await page.screenshot()).toEqual(direct)
+})
+
+test('catalog failure and retry keep the notification header and surface', async ({ page }) => {
+  await mockApi(page)
+  const fail = (route: import('@playwright/test').Route) => route.abort('failed')
+  await page.route('**/api/v1/festival', fail)
+  await page.goto('/notifications')
+  await expect(page.getByRole('alert')).toContainText('서버에 연결하지 못했습니다')
+  await expect(page.getByRole('heading', { name: '알림함', exact: true })).toBeVisible()
+  await expect(page.locator('#main-content')).toHaveClass(/notifications-page/)
+  await page.unroute('**/api/v1/festival', fail)
+  await page.getByRole('button', { name: '다시 시도', exact: true }).click()
+  await expect(page.getByRole('list', { name: '알림 목록' })).toBeVisible()
+  await expect(page.getByRole('alert')).toHaveCount(0)
+})
