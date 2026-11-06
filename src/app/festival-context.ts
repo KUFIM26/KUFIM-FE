@@ -9,6 +9,7 @@ export type FestivalData = {
   booths: Booth[]
   performances: Performance[]
   notices: Notice[]
+  unreadNotifications: number
 }
 export const FestivalContext = createContext<
   (FestivalData & { refresh: () => Promise<void> }) | null

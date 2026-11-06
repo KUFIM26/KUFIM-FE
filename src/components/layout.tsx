@@ -63,7 +63,9 @@ export function Header({
   backIcon?: string
 }) {
   const navigate = useNavigate()
-  const festival = useContext(FestivalContext)?.festival
+  const context = useContext(FestivalContext)
+  const festival = context?.festival
+  const unread = (context?.unreadNotifications ?? 0) > 0
   useEffect(() => {
     document.title = `${title} · KUFIM`
   }, [title])
@@ -83,9 +85,16 @@ export function Header({
         <Link
           to="/notifications"
           aria-label="알림함"
-          className="ml-2 flex size-9 shrink-0 items-center justify-center rounded-full bg-[#f3f3f3]"
+          className="relative ml-2 flex size-9 shrink-0 items-center justify-center rounded-full bg-[#f3f3f3]"
+          data-unread={unread || undefined}
         >
           <Asset src={assets['17:303'].imgAkarIconsBell} />
+          {unread && (
+            <span
+              aria-hidden="true"
+              className="absolute top-1.5 left-6 size-[4.8px] rounded-full bg-[#ff5858]"
+            />
+          )}
         </Link>
       </header>
     )

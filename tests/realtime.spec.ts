@@ -153,7 +153,7 @@ test('STOMP refreshes only notices and booth waiting summaries', async ({ page }
   state.notices[0].title = '방금 변경된 공지'
   stomp.push('/topic/notice')
   await expect(page.getByText('방금 변경된 공지', { exact: true })).toBeVisible({ timeout: 3000 })
-  expect(requests).toEqual(['/api/v1/notices'])
+  expect(requests.sort()).toEqual(['/api/v1/notices', '/api/v1/notifications'])
 })
 
 test('admin queue falls back to polling after the socket disconnects', async ({ page }) => {

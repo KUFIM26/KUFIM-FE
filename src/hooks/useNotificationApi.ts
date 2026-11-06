@@ -1,8 +1,8 @@
 import api from '../apis/axios'
 import type { ApiResponse, NotificationPage } from '../apis/type'
 export const useNotificationApi = {
-  findAll: (page = 0) =>
-    api.get<ApiResponse<NotificationPage>>('/notifications', { params: { page, size: 20 } }),
+  findAll: (page = 0, size = 20) =>
+    api.get<ApiResponse<NotificationPage>>('/notifications', { params: { page, size } }),
   read: (id: number) =>
     api.patch<ApiResponse<{ notificationId: number; readAt: string }>>(`/notifications/${id}/read`),
   readAll: () =>

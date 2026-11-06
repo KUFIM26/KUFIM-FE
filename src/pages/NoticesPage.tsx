@@ -168,7 +168,11 @@ export function NotificationsPage() {
             <ul aria-label="알림 목록">
               {resource.data.content.map((item) => {
                 const unread = !item.readAt
-                const to = item.noticeId ? `/notices/${item.noticeId}` : '/waiting'
+                const to = item.reportId
+                  ? `/report/${item.reportId}`
+                  : item.noticeId
+                    ? `/notices/${item.noticeId}`
+                    : '/waiting'
                 const category =
                   item.type === 'NOTICE'
                     ? notices.find((notice) => notice.id === String(item.noticeId))?.category ||

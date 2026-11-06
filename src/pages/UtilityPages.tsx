@@ -1,3 +1,5 @@
+import { reportApi } from '../apis/report'
+import { useResource } from '../hooks/useResource'
 import { useFestival } from '../app/festival-context'
 import { Link } from 'react-router-dom'
 import { Page } from '../components/layout'
@@ -63,12 +65,14 @@ export function GuidePage({ report = false }: { report?: boolean }) {
   )
 }
 export function PreviewPage() {
+  const reports = useResource(reportApi.mine)
   const { booths, performances, notices } = useFestival()
   const pathFor = (path: string) =>
     path
       .replace(':boothId', booths.find((b) => b.waitingEnabled)?.id || 'missing')
       .replace(':performanceId', performances[0]?.id || 'missing')
       .replace(':noticeId', notices[0]?.id || 'missing')
+      .replace('/:reportId', reports.data?.[0] ? `/${reports.data[0].reportId}` : '')
   return (
     <Page title="KUFIM 화면 목록" back="/">
       <div className="page-pad">
