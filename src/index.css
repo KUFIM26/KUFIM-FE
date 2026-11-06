@@ -314,3 +314,172 @@
     -webkit-backdrop-filter: none !important;
   }
 }
+
+@layer components {
+  .report-page {
+    background-size:
+      auto,
+      100% 100%;
+  }
+  .report-landing,
+  .report-form {
+    min-height: max(calc(100dvh - 68px), 1148px);
+    padding-bottom: 108px;
+  }
+  .report-admin-detail {
+    padding-bottom: 108px;
+  }
+  .report-page .bottom-actions {
+    background-image: url('/assets/figma/reports/254-2/006bf.svg');
+  }
+  .report-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+  }
+  .report-control {
+    border: 0;
+    border-radius: 14px;
+    min-height: 40px;
+    padding: 12px;
+    background: white;
+    box-shadow: 1px 1px 1px rgb(0 0 0 / 10%);
+    font-weight: 600;
+  }
+  .report-control::placeholder {
+    font-weight: 500;
+  }
+  .report-value {
+    padding: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+  .report-badge {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    min-width: 50px;
+    padding: 2px 8px;
+    border-radius: 30px;
+    font-size: 12px;
+    font-weight: 700;
+    color: white;
+  }
+  .report-status-SUBMITTED {
+    background: #e3e3e3;
+    color: black;
+  }
+  .report-status-RECEIVED {
+    background: #12aa49;
+  }
+  .report-status-IN_PROGRESS {
+    background: #177539;
+  }
+  .report-status-COMPLETED {
+    background: #0b4520;
+  }
+  .report-status-CANCELED {
+    background: #e25151;
+  }
+  .report-legend {
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+    padding: 12px;
+  }
+  .report-legend .report-badge {
+    width: 70px;
+    height: 27px;
+  }
+  .report-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    padding: 8px 16px;
+    min-height: 49px;
+  }
+  .report-row-bar {
+    width: 3px;
+    align-self: stretch;
+    flex-shrink: 0;
+  }
+  .report-progress {
+    padding: 16px 28px;
+  }
+  .report-progress ol {
+    display: flex;
+    position: relative;
+    justify-content: space-between;
+  }
+  .report-progress ol::before {
+    content: '';
+    position: absolute;
+    top: 16px;
+    left: 25px;
+    right: 25px;
+    height: 2px;
+    background: #168c41;
+  }
+  .report-progress li {
+    display: flex;
+    z-index: 1;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    width: 50px;
+    font-size: 13px;
+  }
+  .report-step {
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 2px solid #168c41;
+    color: #168c41;
+    background: white;
+    font-size: 20px;
+    font-weight: 700;
+  }
+  .report-step.is-done {
+    background: #168c41;
+    color: white;
+  }
+  .report-progress time {
+    font-size: 10px;
+    color: #989898;
+    font-weight: 600;
+  }
+}
+@layer components {
+  .report-page .bottom-actions > div {
+    width: 100%;
+  }
+  .report-form .bottom-actions .primary-button,
+  .report-admin-detail .bottom-actions .primary-button {
+    min-height: 48px;
+    font-size: 16px;
+  }
+}
+@layer components {
+  .report-page {
+    background-image: url('/assets/figma/reports/261-250/5c849.svg');
+    background-size: auto;
+  }
+  .report-landing,
+  .report-form {
+    background-image: url('/assets/figma/reports/254-2/8b3c2.svg');
+  }
+  .report-admin-list {
+    background-image: url('/assets/figma/reports/267-493/aa8c6.svg');
+  }
+  .report-admin-detail {
+    background-image: url('/assets/figma/reports/267-726/1ef07.svg');
+  }
+  .report-page .report-value {
+    box-shadow: 1px 1px 1px rgb(0 0 0 / 10%);
+  }
+}

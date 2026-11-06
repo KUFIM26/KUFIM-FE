@@ -13,6 +13,9 @@ import { NoticeFormPage, PerformanceFormPage, BoothFormPage } from '../pages/Adm
 import { AdminWaitingListPage, AdminQueuePage, AdminSettingsPage } from '../pages/AdminWaitingPages'
 import { ErrorPage, GuidePage, LoadingPage, NotFoundPage, PreviewPage } from '../pages/UtilityPages'
 
+import { ReportLandingPage, ReportFormPage, ReportDetailPage } from '../pages/ReportPages'
+import { AdminReportListPage, AdminReportDetailPage } from '../pages/AdminReportPages'
+
 // Browser history routes. Configure your static host to fall back to index.html.
 // Admin routes require the server session and role.
 export const router = createBrowserRouter([
@@ -51,11 +54,15 @@ export const router = createBrowserRouter([
           { path: 'booths/:id/edit', element: <BoothFormPage /> },
           { path: 'waiting', element: <AdminWaitingListPage /> },
           { path: 'congestion', element: <AdminCongestionPage /> },
+          { path: 'reports', element: <AdminReportListPage /> },
+          { path: 'reports/:id', element: <AdminReportDetailPage /> },
           { path: 'waiting/:boothId', element: <AdminQueuePage /> },
           { path: 'waiting/:boothId/settings', element: <AdminSettingsPage /> },
         ],
       },
-      { path: 'report', element: <GuidePage report /> },
+      { path: 'report', element: <ReportLandingPage /> },
+      { path: 'report/new', element: <ReportFormPage /> },
+      { path: 'report/:id', element: <ReportDetailPage /> },
       { path: 'guide', element: <GuidePage /> },
       { path: 'preview', element: <PreviewPage /> },
       { path: 'loading', element: <LoadingPage /> },

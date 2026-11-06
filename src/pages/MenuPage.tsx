@@ -42,7 +42,11 @@ export default function MenuPage({ admin = false }: { admin?: boolean }) {
         ...(admin && auth.account?.role === 'SUPER_ADMIN'
           ? [['혼잡도 관리', '/admin/congestion']]
           : []),
-        ['긴급 신고', '/report'],
+        ...(!admin
+          ? [['긴급 신고', '/report']]
+          : auth.account?.role === 'SUPER_ADMIN'
+            ? [['긴급 신고 관리', '/admin/reports']]
+            : []),
       ],
     },
     { title: '기타', items: [['이용 안내', '/guide']] },

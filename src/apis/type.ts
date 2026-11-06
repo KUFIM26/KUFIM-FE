@@ -157,11 +157,12 @@ export type Queue = {
 }
 export type Notification = {
   notificationId: number
-  type: 'NOTICE' | 'WAITING_CALL' | 'WAITING_AUTO_CANCELED'
+  type: 'NOTICE' | 'WAITING_CALL' | 'WAITING_AUTO_CANCELED' | 'REPORT_STATUS'
   title: string
   body: string
   createdAt: string
   readAt: string | null
+  reportId?: number | null
   noticeId: number | null
   waitingId: string | null
 }

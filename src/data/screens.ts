@@ -62,4 +62,9 @@ export const screens = [
     node: '63:178',
     path: '/admin/waiting/:boothId/settings',
   },
+  { group: '사용자', name: 'E-1 긴급신고 안내', node: '254:2', path: '/report' },
+  { group: '사용자', name: 'E-2 긴급신고 작성', node: '254:78', path: '/report/new' },
+  { group: '사용자', name: 'E-3 신고 조회', node: '261:250', path: '/report/:reportId' },
+  { group: '관리자', name: 'W-1 신고 관리', node: '267:493', path: '/admin/reports' },
+  { group: '관리자', name: 'W-2 신고 상세', node: '267:726', path: '/admin/reports/:reportId' },
 ] as const
