@@ -1,6 +1,7 @@
+import { useId, useRef } from 'react'
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { Asset, Card } from './ui'
+import { Asset, Button, Card } from './ui'
 import { reportLabels, reportSteps, reportCategories } from '../apis/report'
 import type { Report, ReportStatus } from '../apis/report'
 import { reportAssets, reportDate, reportElapsed } from '../data/report-design'
@@ -35,18 +36,50 @@ export function ReportLegend() {
     '신고 내용을 확인하여 조치 중입니다.',
     '신고 처리가 완료되었습니다.',
   ]
+  const ref = useRef<HTMLDialogElement>(null)
+  const id = useId()
   return (
-    <section className="flex flex-col gap-2">
-      <ReportHeading info>진행 상황</ReportHeading>
-      <Card className="report-legend">
-        {reportSteps.map((status, i) => (
-          <div key={status} className="flex items-center gap-3">
-            <ReportBadge status={status} />
-            <p className="text-[10px] font-medium">{descriptions[i]}</p>
-          </div>
-        ))}
-      </Card>
-    </section>
+    <>
+      {/* 안내는 평소엔 회색 글씨 한 줄로 두고, 누르면 팝업으로 펼친다 */}
+      <button
+        type="button"
+        aria-haspopup="dialog"
+        className="flex w-fit items-center gap-1.5 text-base font-bold text-[#989898]"
+        onClick={() => ref.current?.showModal()}
+      >
+        <Asset src={reportAssets.info} />
+        진행 상황
+      </button>
+      <dialog
+        ref={ref}
+        aria-labelledby={id}
+        className="confirm-dialog"
+        onClick={(event) => {
+          if (event.target === event.currentTarget) ref.current?.close()
+        }}
+      >
+        <h2 id={id} className="text-center text-xl font-bold">
+          진행 상황
+        </h2>
+        <div className="report-legend my-3 !p-0">
+          {reportSteps.map((status, i) => (
+            <div key={status} className="flex items-center gap-3">
+              <ReportBadge status={status} />
+              <p className="text-xs font-medium">{descriptions[i]}</p>
+            </div>
+          ))}
+        </div>
+        <div className="flex justify-center">
+          <Button
+            tone="gray"
+            className="!min-h-10 !w-[132px] !py-2 !text-base"
+            onClick={() => ref.current?.close()}
+          >
+            닫기
+          </Button>
+        </div>
+      </dialog>
+    </>
   )
 }
 export function ReportProgress({ report }: { report: Report }) {

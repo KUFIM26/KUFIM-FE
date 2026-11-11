@@ -177,3 +177,14 @@ test('admin queue falls back to polling after the socket disconnects', async ({ 
   state.tickets = []
   await expect(page.getByText('현재 대기 중인 팀이 없어요.')).toBeVisible({ timeout: 8000 })
 })
+
+test('a page that starts hidden (prerender, background tab) still loads right away', async ({
+  page,
+}) => {
+  await mockApi(page, { loggedIn: true })
+  await page.addInitScript(() => {
+    Object.defineProperty(document, 'hidden', { configurable: true, get: () => true })
+  })
+  await page.goto('/admin')
+  await expect(page.getByRole('link', { name: 'QR 웨이팅 관리' })).toBeVisible({ timeout: 5000 })
+})

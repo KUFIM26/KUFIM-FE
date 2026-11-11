@@ -10,9 +10,12 @@ export function RequestState({
 }) {
   if (loading)
     return (
-      <p className="p-5 text-sm text-muted" role="status">
-        불러오는 중…
-      </p>
+      <div className="loading-overlay" role="status">
+        <div className="loading-card">
+          <span className="loading-spinner" aria-hidden />
+          <p className="text-sm font-semibold text-[#383838]">불러오는 중…</p>
+        </div>
+      </div>
     )
   if (!error) return null
   return (
