@@ -14,7 +14,6 @@ export function RequestState({
         <div className="loading-card">
           <span className="loading-spinner" aria-hidden />
           <p className="text-sm font-semibold text-[#383838]">불러오는 중…</p>
-          <span className="loading-bar" aria-hidden />
         </div>
       </div>
     )

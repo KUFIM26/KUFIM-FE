@@ -71,6 +71,7 @@ export function ReportLegend() {
         </div>
         <div className="flex justify-center">
           <Button
+            tone="gray"
             className="!min-h-10 !w-[132px] !py-2 !text-base"
             onClick={() => ref.current?.close()}
           >
