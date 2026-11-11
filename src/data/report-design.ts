@@ -20,3 +20,9 @@ export function reportDate(value: string) {
   })
   return `${day[1]}.${day[0]}. ${time}`
 }
+export function reportElapsed(minutes: number) {
+  const value = Math.max(0, Math.floor(minutes))
+  if (value < 60) return `${value}분 전`
+  if (value < 1440) return `${Math.floor(value / 60)}시간 전`
+  return `${Math.floor(value / 1440)}일 전`
+}

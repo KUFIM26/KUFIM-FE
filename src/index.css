@@ -483,3 +483,47 @@
     box-shadow: 1px 1px 1px rgb(0 0 0 / 10%);
   }
 }
+
+@layer components {
+  .report-counts {
+    padding: 11.5px;
+    border-radius: 8px;
+    box-shadow:
+      -1px -1px 1px rgb(0 0 0 / 10%),
+      1px 1px 1px rgb(0 0 0 / 10%);
+  }
+  .report-counts-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .report-count-cell {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
+  .report-count-cell .report-badge {
+    width: min(70px, calc(100% - 6px));
+    min-width: 0;
+    height: 27px;
+    padding: 0;
+    font-size: 12px;
+  }
+  .report-count-number {
+    color: #151515;
+    font-size: 30px;
+    font-weight: 600;
+    line-height: 36px;
+  }
+  .report-count-divider {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translate(-50%, -50%) rotate(90deg);
+  }
+  .report-admin-list > .page-pad {
+    gap: 12px !important;
+  }
+}

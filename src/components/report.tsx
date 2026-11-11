@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { Asset, Card } from './ui'
 import { reportLabels, reportSteps, reportCategories } from '../apis/report'
 import type { Report, ReportStatus } from '../apis/report'
-import { reportAssets, reportDate } from '../data/report-design'
+import { reportAssets, reportDate, reportElapsed } from '../data/report-design'
 const base = '/assets/figma/reports'
 export function ReportHeading({
   children,
@@ -83,27 +83,46 @@ export function ReportProgress({ report }: { report: Report }) {
     </section>
   )
 }
-export function ReportRows({ reports, admin = false }: { reports: Report[]; admin?: boolean }) {
+export function ReportRows({ reports }: { reports: Report[] }) {
   return (
     <Card className="overflow-hidden">
       <ul>
         {reports.map((report) => (
           <li key={report.reportId} className="border-b border-[#e8e8e8] last:border-0">
-            <Link
-              to={`${admin ? '/admin/reports' : '/report'}/${report.reportId}`}
-              className="report-row"
-            >
+            <Link to={`/report/${report.reportId}`} className="report-row">
               <span className={`report-row-bar report-status-${report.status}`} />
               <ReportBadge status={report.status} />
               <div className="min-w-0 flex-1">
                 <h3 className="truncate text-sm font-bold text-[#383838]">{report.title}</h3>
                 <p className="mt-1 text-[10px]">{reportDate(report.createdAt)}</p>
-                {admin && (
-                  <p className="mt-1 text-[10px] text-muted">
-                    {reportCategories[report.category]} · {report.place}
-                    {report.elapsedMinutes !== undefined ? ` · ${report.elapsedMinutes}분 전` : ''}
-                  </p>
-                )}
+              </div>
+              <Asset src={reportAssets.arrow} />
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </Card>
+  )
+}
+// 관리자 목록: 신고 유형별로 묶어 ReportSummary와 같은 형태의 카드로 보여준다
+/** 관리자 목록 행. 방문자용 ReportRows에 유형·장소·경과 시간을 더한다. */
+export function AdminReportRows({ reports }: { reports: Report[] }) {
+  return (
+    <Card className="overflow-hidden">
+      <ul>
+        {reports.map((report) => (
+          <li key={report.reportId} className="border-b border-[#e8e8e8] last:border-0">
+            <Link to={`/admin/reports/${report.reportId}`} className="report-row">
+              <span className={`report-row-bar report-status-${report.status}`} />
+              <ReportBadge status={report.status} />
+              <div className="min-w-0 flex-1">
+                <h3 className="truncate text-sm font-bold text-[#383838]">{report.title}</h3>
+                <p className="mt-1 text-[10px]">{reportDate(report.createdAt)}</p>
+                <p className="mt-1 truncate text-[10px] text-muted">
+                  {reportCategories[report.category]} · {report.place}
+                  {report.elapsedMinutes !== undefined &&
+                    ` · ${reportElapsed(report.elapsedMinutes)}`}
+                </p>
               </div>
               <Asset src={reportAssets.arrow} />
             </Link>
@@ -117,7 +136,8 @@ export function ReportSummary({ report, children }: { report: Report; children?:
   return (
     <section className="green-gradient rounded-xl p-3.5 text-white shadow-card">
       <div className="mb-2 flex items-center gap-2.5">
-        <ReportBadge status={report.status} />
+        {/* 처리 상태는 진행 단계 표시가 따로 보여주므로, 카드에는 신고 유형을 표시한다 */}
+        <span className="report-badge bg-white/50">{reportCategories[report.category]}</span>
         <time className="text-xs">{reportDate(report.createdAt)}</time>
       </div>
       <h2 className="text-lg font-bold">{report.title}</h2>
