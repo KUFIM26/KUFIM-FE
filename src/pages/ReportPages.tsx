@@ -2,7 +2,7 @@ import { reportAssets } from '../data/report-design'
 import { useCallback, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { BottomActions, Page } from '../components/layout'
-import { Asset, Button, Card, ConfirmDialog, EmptyState } from '../components/ui'
+import { Asset, Button, Card, Chips, ConfirmDialog, EmptyState } from '../components/ui'
 import { RequestState } from '../components/RequestState'
 import {
   ReportContent,
@@ -16,9 +16,15 @@ import { reportApi, reportCategories } from '../apis/report'
 import type { ReportCategory, ReportInput } from '../apis/report'
 import { useAction, useResource } from '../hooks/useResource'
 
+// 상황실 대표번호. VITE_CONTROL_ROOM_PHONE 이 설정되면 그 값이 우선한다.
+const CONTROL_ROOM_PHONE = '02-450-3990'
+
 export function ReportLandingPage() {
   const resource = useResource(reportApi.mine, 10000)
-  const phone = import.meta.env.VITE_CONTROL_ROOM_PHONE?.replace(/[^0-9+]/g, '')
+  const phone = (import.meta.env.VITE_CONTROL_ROOM_PHONE || CONTROL_ROOM_PHONE).replace(
+    /[^0-9+]/g,
+    '',
+  )
   return (
     <Page
       title="신고하기"
@@ -37,20 +43,10 @@ export function ReportLandingPage() {
             <li>또한 직접 방문이 필요한 경우 아래 버튼을 클릭하여 상황실 위치를 확인해주세요.</li>
           </ol>
         </Card>
-        {phone ? (
-          <a className="primary-button green-gradient gap-2" href={`tel:${phone}`}>
-            <Asset src={reportAssets.phone} />
-            상황실 전화하기
-          </a>
-        ) : (
-          <div>
-            <Button disabled className="gap-2">
-              <Asset src={reportAssets.phone} />
-              상황실 전화하기
-            </Button>
-            <p className="mt-1.5 text-center text-xs text-muted">상황실 연락처 등록 대기 중</p>
-          </div>
-        )}
+        <a className="primary-button green-gradient gap-2" href={`tel:${phone}`}>
+          <Asset src={reportAssets.phone} />
+          상황실 전화하기
+        </a>
         <Link className="primary-button green-gradient gap-2" to="/map?facility=상황실">
           <Asset src={reportAssets.location} />
           상황실 위치 보기
@@ -120,20 +116,19 @@ export function ReportFormPage() {
         }}
       >
         <fieldset disabled={action.pending} className="flex min-w-0 flex-col gap-5">
-          <label className="report-field">
+          <section className="report-field" aria-label="신고 유형">
             <ReportHeading>신고 유형</ReportHeading>
-            <select
-              className="form-control report-control"
-              value={form.category}
-              onChange={(e) => update('category', e.target.value as ReportCategory)}
-            >
-              {Object.entries(reportCategories).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
+            <Chips
+              options={Object.values(reportCategories)}
+              value={reportCategories[form.category]}
+              onChange={(label) => {
+                const category = (Object.keys(reportCategories) as ReportCategory[]).find(
+                  (key) => reportCategories[key] === label,
+                )
+                if (category) update('category', category)
+              }}
+            />
+          </section>
           {(
             [
               ['title', '신고 제목', 30, '신고 제목을 입력하세요.(30자 이내)'],
@@ -193,11 +188,16 @@ export function ReportFormPage() {
                 checked={form.privacyConsent}
                 onChange={(e) => update('privacyConsent', e.target.checked)}
               />
-              <Asset
-                src={reportAssets.check}
-                className="rounded-full opacity-50 peer-checked:opacity-100 peer-checked:ring-2 peer-checked:ring-brand peer-focus-visible:outline-2"
+              {/* 아이콘을 마스크로 써서 체크 시 회색 → 브랜드 초록으로 채운다 */}
+              <span
+                aria-hidden
+                className="size-[22px] shrink-0 rounded-full bg-[#8b8b8b] opacity-50 transition-[background-color,opacity] peer-checked:bg-brand peer-checked:opacity-100 peer-focus-visible:outline-2"
+                style={{
+                  mask: `url(${reportAssets.check}) center / contain no-repeat`,
+                  WebkitMask: `url(${reportAssets.check}) center / contain no-repeat`,
+                }}
               />
-              동의합니다
+              <span className="transition-colors peer-checked:text-brand">동의합니다</span>
             </label>
           </section>
         </fieldset>

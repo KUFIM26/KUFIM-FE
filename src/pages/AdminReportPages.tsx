@@ -2,17 +2,25 @@ import { reportAssets } from '../data/report-design'
 import { useCallback, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { BottomActions, Page } from '../components/layout'
-import { Button, Card, Chips, ConfirmDialog, EmptyState } from '../components/ui'
+import { Asset, Button, Card, Chips, ConfirmDialog, EmptyState } from '../components/ui'
 import { RequestState } from '../components/RequestState'
 import {
+  AdminReportRows,
+  ReportBadge,
   ReportContent,
   ReportHeading,
   ReportLegend,
   ReportProgress,
-  ReportRows,
   ReportSummary,
 } from '../components/report'
-import { reportApi, reportLabels, reportSaveMessage, reportSteps } from '../apis/report'
+import {
+  reportApi,
+  reportCategories,
+  reportLabels,
+  reportSaveMessage,
+  reportSteps,
+} from '../apis/report'
+import type { ReportCategory } from '../apis/report'
 import { useAction, useResource } from '../hooks/useResource'
 
 export function AdminReportListPage() {
@@ -21,6 +29,10 @@ export function AdminReportListPage() {
   const loader = useCallback(() => reportApi.list(status, page), [status, page])
   const resource = useResource(loader, 10000)
   const options = ['', ...reportSteps, 'CANCELED']
+  // 신고 유형은 서버 조회 조건이 없어, 불러온 페이지 안에서만 거른다.
+  const [category, setCategory] = useState<ReportCategory | ''>('')
+  const categoryLabels = ['전체', ...Object.values(reportCategories)]
+  const reports = resource.data?.content.filter((r) => !category || r.category === category)
   return (
     <Page
       title="신고하기"
@@ -30,8 +42,41 @@ export function AdminReportListPage() {
     >
       <div className="page-pad !gap-4">
         <ReportLegend />
+        <Card className="report-counts">
+          <div className="report-counts-grid" aria-label="신고 상태별 건수">
+            {reportSteps.map((step, index) => {
+              const keys = ['submitted', 'received', 'inProgress', 'completed'] as const
+              const count = resource.data?.summary[keys[index]]
+              return (
+                <div key={step} className="report-count-cell">
+                  {index > 0 && (
+                    <Asset
+                      src="/assets/figma/reports/267-493/80e15.svg"
+                      className="report-count-divider"
+                    />
+                  )}
+                  <ReportBadge status={step} />
+                  <span className="report-count-number">
+                    {count === undefined ? '—' : String(count).padStart(2, '0')}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        </Card>
         <section className="flex flex-col gap-2">
           <ReportHeading>접수된 신고 내역</ReportHeading>
+          <Chips
+            options={categoryLabels}
+            value={category ? reportCategories[category] : '전체'}
+            onChange={(label) =>
+              setCategory(
+                (Object.keys(reportCategories) as ReportCategory[]).find(
+                  (key) => reportCategories[key] === label,
+                ) || '',
+              )
+            }
+          />
           <Chips
             compact
             options={options.map((s) =>
@@ -47,23 +92,16 @@ export function AdminReportListPage() {
               setPage(0)
             }}
           />
-          {resource.data && (
-            <p className="text-xs text-muted">
-              신청 {resource.data.summary.submitted} · 접수 {resource.data.summary.received} · 처리
-              중 {resource.data.summary.inProgress} · 완료 {resource.data.summary.completed} · 취소{' '}
-              {resource.data.summary.canceled}
-            </p>
-          )}
           <RequestState
             loading={resource.loading}
             error={resource.error}
             retry={() => void resource.refresh()}
           />
-          {resource.data &&
-            (resource.data.content.length ? (
-              <ReportRows admin reports={resource.data.content} />
+          {reports &&
+            (reports.length ? (
+              <AdminReportRows reports={reports} />
             ) : (
-              <EmptyState>해당 상태의 신고가 없습니다.</EmptyState>
+              <EmptyState>해당 조건의 신고가 없습니다.</EmptyState>
             ))}
           {resource.data && resource.data.totalPages > 1 && (
             <div className="flex items-center justify-between">
