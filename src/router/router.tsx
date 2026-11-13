@@ -15,6 +15,12 @@ import { ErrorPage, GuidePage, LoadingPage, NotFoundPage, PreviewPage } from '..
 
 import { ReportLandingPage, ReportFormPage, ReportDetailPage } from '../pages/ReportPages'
 import { AdminReportListPage, AdminReportDetailPage } from '../pages/AdminReportPages'
+import { LostFoundPage, LostFoundDetailPage } from '../pages/LostFoundPages'
+import {
+  AdminLostItemListPage,
+  AdminLostItemFormPage,
+  AdminLostItemDetailPage,
+} from '../pages/AdminLostItemPages'
 
 // Browser history routes. Configure your static host to fall back to index.html.
 // Admin routes require the server session and role.
@@ -56,6 +62,10 @@ export const router = createBrowserRouter([
           { path: 'congestion', element: <AdminCongestionPage /> },
           { path: 'reports', element: <AdminReportListPage /> },
           { path: 'reports/:id', element: <AdminReportDetailPage /> },
+          { path: 'lost-items', element: <AdminLostItemListPage /> },
+          { path: 'lost-items/new', element: <AdminLostItemFormPage key="new" /> },
+          { path: 'lost-items/:id', element: <AdminLostItemDetailPage /> },
+          { path: 'lost-items/:id/edit', element: <AdminLostItemFormPage /> },
           { path: 'waiting/:boothId', element: <AdminQueuePage /> },
           { path: 'waiting/:boothId/settings', element: <AdminSettingsPage /> },
         ],
@@ -63,6 +73,8 @@ export const router = createBrowserRouter([
       { path: 'report', element: <ReportLandingPage /> },
       { path: 'report/new', element: <ReportFormPage /> },
       { path: 'report/:id', element: <ReportDetailPage /> },
+      { path: 'lost-found', element: <LostFoundPage /> },
+      { path: 'lost-found/:id', element: <LostFoundDetailPage /> },
       { path: 'guide', element: <GuidePage /> },
       { path: 'preview', element: <PreviewPage /> },
       { path: 'loading', element: <LoadingPage /> },

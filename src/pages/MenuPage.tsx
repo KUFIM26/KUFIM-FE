@@ -43,9 +43,15 @@ export default function MenuPage({ admin = false }: { admin?: boolean }) {
           ? [['혼잡도 관리', '/admin/congestion']]
           : []),
         ...(!admin
-          ? [['긴급 신고', '/report']]
+          ? [
+              ['긴급 신고', '/report'],
+              ['분실물센터', '/lost-found'],
+            ]
           : auth.account?.role === 'SUPER_ADMIN'
-            ? [['긴급 신고 관리', '/admin/reports']]
+            ? [
+                ['긴급 신고 관리', '/admin/reports'],
+                ['분실물센터 관리', '/admin/lost-items'],
+              ]
             : []),
       ],
     },

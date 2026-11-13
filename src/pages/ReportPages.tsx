@@ -1,6 +1,6 @@
-import { reportAssets } from '../data/report-design'
+import { controlRoomTel, reportAssets } from '../data/report-design'
 import { useCallback, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { BottomActions, Page } from '../components/layout'
 import { Asset, Button, Card, Chips, ConfirmDialog, EmptyState } from '../components/ui'
 import { RequestState } from '../components/RequestState'
@@ -16,15 +16,8 @@ import { reportApi, reportCategories } from '../apis/report'
 import type { ReportCategory, ReportInput } from '../apis/report'
 import { useAction, useResource } from '../hooks/useResource'
 
-// 상황실 대표번호. VITE_CONTROL_ROOM_PHONE 이 설정되면 그 값이 우선한다.
-const CONTROL_ROOM_PHONE = '02-450-3990'
-
 export function ReportLandingPage() {
   const resource = useResource(reportApi.mine, 10000)
-  const phone = (import.meta.env.VITE_CONTROL_ROOM_PHONE || CONTROL_ROOM_PHONE).replace(
-    /[^0-9+]/g,
-    '',
-  )
   return (
     <Page
       title="신고하기"
@@ -43,7 +36,7 @@ export function ReportLandingPage() {
             <li>또한 직접 방문이 필요한 경우 아래 버튼을 클릭하여 상황실 위치를 확인해주세요.</li>
           </ol>
         </Card>
-        <a className="primary-button green-gradient gap-2" href={`tel:${phone}`}>
+        <a className="primary-button green-gradient gap-2" href={controlRoomTel}>
           <Asset src={reportAssets.phone} />
           상황실 전화하기
         </a>
@@ -85,7 +78,12 @@ const initial: ReportInput = {
   privacyConsent: false,
 }
 export function ReportFormPage() {
-  const [form, setForm] = useState(initial)
+  // 분실물센터에서 넘어오면 ?category=LOST_ITEM 으로 유형이 선택된 채 열린다.
+  const [params] = useSearchParams()
+  const [form, setForm] = useState(() => {
+    const category = params.get('category') as ReportCategory | null
+    return category && category in reportCategories ? { ...initial, category } : initial
+  })
   const [cancel, setCancel] = useState(false)
   const action = useAction()
   const navigate = useNavigate()
