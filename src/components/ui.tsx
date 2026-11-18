@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef } from 'react'
 import type { ButtonHTMLAttributes, ReactNode } from 'react'
 import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { figmaAssets as assets } from '../data/figma-assets'
 
 export function Asset({
@@ -111,10 +112,11 @@ export function Chips({
     </div>
   )
 }
-export function EmptyState({ children = '등록된 항목이 없어요.' }: { children?: ReactNode }) {
+export function EmptyState({ children }: { children?: ReactNode }) {
+  const { t } = useTranslation()
   return (
     <div role="status" className="rounded-xl bg-white px-5 py-10 text-center text-sm text-muted">
-      {children}
+      {children ?? t('common.empty')}
     </div>
   )
 }

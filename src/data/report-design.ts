@@ -26,3 +26,5 @@ export function reportElapsed(minutes: number) {
   if (value < 1440) return `${Math.floor(value / 60)}시간 전`
   return `${Math.floor(value / 1440)}일 전`
 }
+// 상황실 대표번호. VITE_CONTROL_ROOM_PHONE 이 설정되면 그 값이 우선한다.
+export const controlRoomTel = `tel:${(import.meta.env.VITE_CONTROL_ROOM_PHONE || '02-450-3990').replace(/[^0-9+]/g, '')}`

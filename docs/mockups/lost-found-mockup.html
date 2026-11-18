@@ -1,0 +1,513 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>분실물센터 화면 시안</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/variable/pretendardvariable.min.css" />
+<style>
+  :root {
+    --brand: #116633;
+    --canvas: #fafcfa;
+    --ink: #111;
+    --muted: #494949;
+    --card-shadow: 2px 2px 1px rgb(0 0 0 / 10%);
+    --st-stored-bg: #1fa04f;   --st-stored-fg: #fff;
+    --st-returned-bg: #4a4a4a; --st-returned-fg: #fff;
+    --st-report-bg: #e3e3e3;   --st-report-fg: #383838;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 40px; background: #edf0ee; color: #000;
+    font-family: 'Pretendard Variable', Pretendard, -apple-system, sans-serif; font-size: 14px; line-height: 1.2;
+  }
+  h1.board-title { font-size: 22px; margin: 0 0 6px; }
+  p.board-sub { margin: 0 0 32px; color: #666; font-size: 13px; line-height: 1.5; max-width: 900px; }
+  .section-label { font-size: 15px; font-weight: 700; margin: 40px 0 14px; padding: 4px 10px; display: inline-block; background: #fff; border-radius: 6px; }
+  .board { display: flex; flex-wrap: wrap; gap: 40px; align-items: flex-start; }
+  .frame-wrap { display: flex; flex-direction: column; gap: 8px; }
+  .frame-name { color: #9a9a9a; font-size: 12px; font-weight: 600; }
+  .frame-note { color: #6b6b6b; font-size: 11px; line-height: 1.5; width: 393px; }
+  .frame { position: relative; width: 393px; min-height: 852px; background: #fff; overflow: hidden; display: flex; flex-direction: column; }
+
+  /* App chrome */
+  .header { height: 68px; display: flex; align-items: center; gap: 16px; padding: 0 20px; background: #fff; flex: none; }
+  .header .back { width: 28px; height: 28px; border-radius: 50%; background: #f3f3f3; display: flex; align-items: center; justify-content: center; }
+  .header .back svg { transform: rotate(180deg); }
+  .header h1 { font-size: 18px; font-weight: 700; margin: 0; }
+  .surface { flex: 1; background: var(--canvas); border-radius: 12px 12px 0 0; box-shadow: 0 -1px 1px rgb(0 0 0 / 20%); }
+  .pad { display: flex; flex-direction: column; gap: 20px; padding: 20px 20px 120px; }
+  .pad.tight { gap: 12px; }
+  .card { background: #fff; border-radius: 12px; box-shadow: var(--card-shadow); }
+  .section-title { display: flex; align-items: center; gap: 6px; font-size: 16px; font-weight: 700; margin: 0; }
+  .section-title .more { margin-left: auto; font-size: 11px; font-weight: 600; color: #8b8b8b; }
+  .field { display: flex; flex-direction: column; gap: 8px; }
+  .control { width: 100%; background: #fff; border-radius: 13px; padding: 12px; font-size: 14px; font-weight: 500; box-shadow: 1px 1px 1px rgb(0 0 0 / 10%); display: flex; align-items: center; gap: 8px; }
+  .control.area { min-height: 100px; line-height: 1.45; align-items: flex-start; }
+  .control.placeholder, .control .ph-text { color: #8b8b8b; }
+  .control .trail { margin-left: auto; color: #8b8b8b; display: flex; }
+  .counter { align-self: flex-end; font-size: 11px; color: #8b8b8b; margin-top: -2px; }
+  .label { font-size: 13px; font-weight: 700; color: #383838; }
+  .label small { font-size: 11px; font-weight: 500; color: #8b8b8b; margin-left: 4px; }
+  .bottom-actions { position: absolute; left: 0; right: 0; bottom: 0; display: flex; gap: 8px; padding: 20px; background: #fff; border-radius: 12px 12px 0 0; box-shadow: 0 -1px 1px rgb(0 0 0 / 20%); }
+  .btn { flex: 1; min-height: 50px; border: 0; border-radius: 12px; display: flex; align-items: center; justify-content: center; gap: 8px; font: inherit; font-size: 16px; font-weight: 700; color: #fff; box-shadow: var(--card-shadow); white-space: nowrap; }
+  .btn.green { background-image: linear-gradient(100deg, #0f5b2b 2.57%, #1f9249 98.63%); }
+  .btn.gray { background: #cfcfcf; color: #2a2a2a; }
+  .btn.outline-green { background: #fff; color: var(--brand); box-shadow: inset 0 0 0 1.5px var(--brand), var(--card-shadow); }
+  .btn.sm { min-height: 40px; font-size: 15px; border-radius: 13px; }
+
+  /* Status badge */
+  .badge { display: inline-flex; align-items: center; justify-content: center; min-width: 46px; height: 22px; padding: 0 9px; border-radius: 999px; font-size: 11px; font-weight: 700; white-space: nowrap; flex: none; }
+  .st-STORED { background: var(--st-stored-bg); color: var(--st-stored-fg); }
+  .st-RETURNED { background: var(--st-returned-bg); color: var(--st-returned-fg); }
+  .st-REPORT { background: var(--st-report-bg); color: var(--st-report-fg); }
+  .badge.pill { background: rgb(255 255 255 / 50%); color: #fff; }
+
+  /* Summary card */
+  .summary { border-radius: 12px; padding: 14px 14px 13px; color: #fff; background-image: linear-gradient(100deg, #0f5b2b 2.57%, #1f9249 98.63%); box-shadow: var(--card-shadow); }
+  .summary.off { background-image: none; background: #6b6b6b; }
+  .summary .row1 { display: flex; align-items: center; gap: 10px; font-size: 12px; font-weight: 600; }
+  .summary h2 { margin: 9px 0 8px; font-size: 18px; font-weight: 700; line-height: 1.3; }
+  .summary .state { font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+  .summary .state .bar { width: 1px; height: 11px; background: rgb(255 255 255 / 70%); }
+  .summary .state .led { width: 7px; height: 7px; border-radius: 50%; background: #b9f5cd; }
+
+  .text-card { padding: 12px 12px 14px; font-size: 13px; font-weight: 500; line-height: 1.5; }
+  .chips { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+  .chips::-webkit-scrollbar { display: none; }
+  .chip { flex: none; padding: 6px 12px; border-radius: 999px; font-size: 14px; font-weight: 600; background: #eee; color: #383838; box-shadow: 1px 1px 1px rgb(0 0 0 / 10%); }
+  .chip.on { background: var(--brand); color: #fff; }
+  .chips.compact { gap: 6px; }
+  .chips.compact .chip { padding: 3px 9px; font-size: 11px; box-shadow: none; }
+  .hint { font-size: 11px; color: #6b6b6b; font-weight: 500; line-height: 1.5; }
+  .hint b { color: var(--brand); }
+  .ghost { opacity: .55; }
+
+  /* Guidance card */
+  .guide { padding: 14px; display: flex; flex-direction: column; gap: 10px; background: #f1f8f3; box-shadow: inset 3px 0 0 var(--brand), var(--card-shadow); }
+  .guide p { margin: 0; font-size: 13px; font-weight: 600; line-height: 1.5; color: #1a1a1a; }
+  .guide dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 5px 10px; font-size: 12px; line-height: 1.4; }
+  .guide dt { color: #6b6b6b; font-weight: 600; display: flex; align-items: center; gap: 5px; }
+  .guide dd { margin: 0; font-weight: 600; color: #1a1a1a; }
+  .guide ol { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; counter-reset: g; }
+  .guide li { counter-increment: g; display: flex; align-items: flex-start; gap: 8px; font-size: 13px; font-weight: 600; line-height: 1.45; color: #1a1a1a; }
+  .guide li::before { content: counter(g); flex: none; width: 19px; height: 19px; border-radius: 50%; background: var(--brand); color: #fff; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+  .banner { padding: 12px; border-radius: 12px; background: #efefef; color: #383838; font-size: 12px; font-weight: 600; line-height: 1.5; box-shadow: inset 3px 0 0 #4a4a4a; }
+  .banner b { display: block; font-size: 14px; color: #1a1a1a; margin-bottom: 2px; }
+
+  /* Search + toggle */
+  .search { color: #8b8b8b; }
+  .search.filled { color: #111; }
+  .search svg { flex: none; color: #8b8b8b; }
+  .tool-row { display: flex; align-items: center; justify-content: space-between; font-size: 12px; font-weight: 600; color: #6b6b6b; margin: -8px 0; }
+  .tool-row .tg { display: flex; align-items: center; gap: 8px; color: #383838; font-weight: 700; }
+  .switch { width: 38px; height: 22px; border-radius: 999px; background: #cfcfcf; position: relative; flex: none; }
+  .switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgb(0 0 0 / 25%); }
+  .switch.on { background: var(--brand); }
+  .switch.on::after { left: 18px; }
+
+  /* Photo placeholder */
+  .ph { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; background: #e9efea; color: #7f9487; border-radius: 12px; overflow: hidden; }
+  .ph.t-blue { background: #e6edf3; color: #7c8fa3; }
+  .ph.t-sand { background: #f2ede3; color: #a3957a; }
+  .ph.t-rose { background: #f3e9ea; color: #a88389; }
+  .ph.private { background: #e4e4e4; color: #7a7a7a; }
+  .ph .cap { padding: 0 14px; font-size: 10px; font-weight: 600; line-height: 1.4; text-align: center; }
+  .ph.hero { height: 220px; box-shadow: var(--card-shadow); }
+  .ph.hero .cap { font-size: 12px; }
+  .ph.hero .tag { position: absolute; right: 10px; bottom: 10px; padding: 3px 8px; border-radius: 999px; background: rgb(0 0 0 / 45%); color: #fff; font-size: 10px; font-weight: 600; }
+
+  /* Item grid (visitor) */
+  .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .item { overflow: hidden; display: flex; flex-direction: column; }
+  .item .ph { height: 116px; border-radius: 0; }
+  .item .badge { position: absolute; top: 8px; left: 8px; }
+  .item .body { padding: 10px 10px 12px; display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+  .item .name { font-size: 14px; font-weight: 700; color: #1a1a1a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .item .meta { font-size: 11px; font-weight: 500; color: #6b6b6b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .empty { padding: 32px 20px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .empty svg { color: #b5b5b5; }
+  .empty b { font-size: 15px; color: #1a1a1a; }
+  .empty span { font-size: 12px; font-weight: 500; line-height: 1.55; color: #494949; }
+
+  /* Counts card (app: .report-counts) */
+  .counts { padding: 11.5px; border-radius: 8px; background: #fff; box-shadow: -1px -1px 1px rgb(0 0 0 / 10%), 1px 1px 1px rgb(0 0 0 / 10%); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .counts .cell { position: relative; display: flex; flex-direction: column; align-items: center; gap: 8px; min-width: 0; }
+  .counts .cell + .cell::before { content: ''; position: absolute; left: 0; top: 50%; width: 1px; height: 44px; transform: translateY(-50%); background: #e3e3e3; }
+  .counts .badge { width: 70px; height: 27px; padding: 0; font-size: 12px; }
+  .counts .num { color: #151515; font-size: 30px; font-weight: 600; line-height: 36px; }
+
+  /* Admin list rows */
+  .rows { overflow: hidden; }
+  .row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-bottom: 1px solid #e8e8e8; }
+  .row:last-child { border: 0; }
+  .row .ph { width: 48px; height: 48px; border-radius: 10px; flex: none; }
+  .row .body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+  .row .name { font-size: 14px; font-weight: 700; color: #383838; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .row .meta { font-size: 11px; font-weight: 500; color: #6b6b6b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .row > svg { flex: none; }
+
+  /* Admin form */
+  .picker { display: flex; flex-direction: column; gap: 10px; }
+  .picker .add { width: 100%; height: 120px; border-radius: 12px; border: 1.5px dashed #a9bfb1; background: #fff; color: var(--brand); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; font-size: 12px; font-weight: 700; }
+  .picker .thumb { position: relative; width: 100%; height: 220px; }
+  .picker .thumb .ph { width: 100%; height: 100%; }
+  .picker .thumb .x { position: absolute; top: 10px; right: 10px; width: 26px; height: 26px; border-radius: 50%; background: #1a1a1a; color: #fff; display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 3px rgb(0 0 0 / 25%); }
+  .switch-row { padding: 12px; display: flex; align-items: center; gap: 12px; }
+  .switch-row .txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+  .switch-row b { font-size: 14px; }
+  .links { display: flex; justify-content: flex-end; gap: 14px; font-size: 12px; font-weight: 700; color: var(--brand); margin: -4px 2px; }
+  .links .del { color: #c62828; }
+  .link { color: var(--brand); font-size: 11px; font-weight: 700; text-decoration: underline; text-underline-offset: 2px; }
+
+  /* Key-value card */
+  .kv { padding: 4px 12px; }
+  .kv div { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid #eee; font-size: 13px; }
+  .kv div:last-child { border: 0; }
+  .kv span { width: 68px; flex: none; color: #6b6b6b; font-weight: 600; }
+  .kv b { font-weight: 700; color: #1a1a1a; }
+  .kv .link { margin-left: auto; }
+
+  /* Dialog */
+  .dim { position: absolute; inset: 0; background: rgb(0 0 0 / 45%); display: flex; align-items: center; justify-content: center; z-index: 5; }
+  .dialog { width: 353px; padding: 18px 14px 16px; border-radius: 12px; background: #fff; box-shadow: var(--card-shadow); text-align: center; }
+  .dialog h3 { margin: 0; font-size: 20px; font-weight: 700; }
+  .dialog p { margin: 10px 0 14px; font-size: 13px; font-weight: 500; line-height: 1.5; color: #383838; }
+  .dialog .form { display: flex; flex-direction: column; gap: 12px; text-align: left; margin-bottom: 16px; }
+  .dialog .control { background: #f6f6f6; box-shadow: inset 0 0 0 1px #e6e6e6; }
+  .dialog .row-btn { display: flex; justify-content: center; gap: 12px; }
+  .dialog .row-btn .btn { flex: none; width: 132px; min-height: 40px; font-size: 16px; }
+</style>
+</head>
+<body>
+<h1 class="board-title">분실물센터 화면 시안</h1>
+<p class="board-sub">
+  방문자는 상황실에서 보관 중인 습득물을 목록으로 둘러보고, 본인 확인을 거쳐 직접 방문해 찾아갑니다. 총괄 관리자(SUPER_ADMIN)는 습득물을 등록하고 주인에게 인계한 기록을 남깁니다. 데이터는 모두 예시입니다.
+</p>
+
+<!-- Reusable icon defs -->
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <symbol id="i-back" viewBox="0 0 7.78 13.22"><path d="M1.48 0 0 1.554 4.807 6.611 0 11.669l1.48 1.553 6.298-6.611L1.48 0Z" fill="#333"/></symbol>
+    <symbol id="i-mega" viewBox="0 0 15 12"><path d="M4.286 10.974a1.03 1.03 0 0 1-.314.725 1.1 1.1 0 0 1-1.515 0 1.03 1.03 0 0 1-.314-.725V8.921a2.2 2.2 0 0 1-1.515-.602A2.01 2.01 0 0 1 0 6.868V4.815c0-.545.226-1.067.628-1.452a2.2 2.2 0 0 1 1.515-.601h2.143v8.212ZM11.01.054a.55.55 0 0 1 .776.459v10.657a.55.55 0 0 1-.776.459L5.357 8.92V2.762L11.01.054Zm3.398 4.478c.178.085.327.216.432.378.104.162.16.349.16.54v.783c0 .19-.055.378-.16.54a1.08 1.08 0 0 1-.432.378l-1.551.743V3.788l1.55.744Z" fill="#000"/></symbol>
+    <symbol id="i-chev" viewBox="0 0 18 18"><rect width="18" height="18" rx="9" fill="#F1F1F1"/><path d="M7.142 4 6 5.175 9.709 9 6 12.825 7.142 14 12 9 7.142 4Z" fill="#383838"/></symbol>
+    <symbol id="i-call" viewBox="0 0 16 16"><path d="M3.6 1.2 5.8 1c.3 0 .6.2.7.5l.9 2.6c.1.3 0 .6-.2.8L5.9 6.1a9.6 9.6 0 0 0 4 4l1.2-1.3c.2-.2.5-.3.8-.2l2.6.9c.3.1.5.4.5.7l-.2 2.2c0 .4-.4.7-.8.7C7.1 13.1 2.9 8.9 2.9 2c0-.4.3-.8.7-.8Z" fill="currentColor"/></symbol>
+    <symbol id="p-phone" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2.5" width="10" height="19" rx="2.2"/><path d="M10.5 5h3M11 18.5h2"/></g></symbol>
+    <symbol id="p-wallet" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5V7A2.5 2.5 0 0 1 6 4.5h11v4"/><rect x="3.5" y="8.5" width="17" height="11" rx="2"/><path d="M20.5 12.5h-4a1.5 1.5 0 0 0 0 3h4"/></g></symbol>
+    <symbol id="p-card" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5.5" width="19" height="13" rx="2"/><path d="M2.5 9.5h19M6 15h4"/></g></symbol>
+    <symbol id="p-id" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="14" rx="2"/><circle cx="8.5" cy="10.5" r="2"/><path d="M5.5 15.5c.6-1.4 1.7-2 3-2s2.4.6 3 2M14.5 10h4M14.5 13.5h4"/></g></symbol>
+    <symbol id="p-umbrella" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 18 0H3ZM12 3V2M12 12v7a2 2 0 0 0 4 0"/></g></symbol>
+    <symbol id="p-buds" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="6" width="16" height="13" rx="4"/><path d="M4 11.5h16"/><circle cx="12" cy="15" r=".6"/></g></symbol>
+    <symbol id="p-bag" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8.5h14l1 12H4l1-12Z"/><path d="M8.5 11V7a3.5 3.5 0 0 1 7 0v4"/></g></symbol>
+    <symbol id="p-key" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4.5"/><path d="m11.3 11.7 8.2-8.2M16 7l2.5 2.5M13.5 9.5l2 2"/></g></symbol>
+    <symbol id="p-lock" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5M12 14.5v2"/></g></symbol>
+    <symbol id="p-camera" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5a2 2 0 0 1 2-2h2l1.5-2h6l1.5 2h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2v-9Z"/><circle cx="12" cy="13" r="3.5"/></g></symbol>
+    <symbol id="p-search" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></g></symbol>
+    <symbol id="p-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></symbol>
+    <symbol id="p-cal" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></g></symbol>
+  </defs>
+</svg>
+
+<!-- ========================= 방문자 ========================= -->
+<div class="section-label">방문자</div>
+<div class="board">
+
+  <!-- L1 -->
+  <div class="frame-wrap">
+    <div class="frame-name">L1 · 분실물센터 홈</div>
+    <div class="frame">
+      <div class="header"><span class="back"><svg width="8" height="13"><use href="#i-back"/></svg></span><h1>분실물센터</h1></div>
+      <div class="surface"><div class="pad">
+        <div class="card guide">
+          <p>습득물은 상황실에서 보관합니다.<br />본인 확인 후 찾아가실 수 있어요.</p>
+          <dl><dt>보관 장소</dt><dd>상황실</dd><dt>운영 시간</dt><dd>축제 운영 시간과 동일</dd><dt>축제 종료 후</dt><dd>남은 물건은 총학생회로 이관</dd></dl>
+        </div>
+        <div class="chips"><span class="chip on">전체</span><span class="chip">전자기기</span><span class="chip">지갑·카드</span><span class="chip">신분증</span><span class="chip">의류·잡화</span><span class="chip">기타</span></div>
+        <div class="control search"><svg width="16" height="16"><use href="#p-search"/></svg>물건 이름, 장소로 검색</div>
+        <div class="tool-row"><span>습득물 7건</span><span class="tg">보관 중만 보기<span class="switch on"></span></span></div>
+        <div class="grid">
+          <div class="card item"><div class="ph"><span class="badge st-STORED">보관 중</span><svg width="44" height="44"><use href="#p-buds"/></svg></div><div class="body"><span class="name">검은색 에어팟 케이스</span><span class="meta">노천극장 · 12분 전</span></div></div>
+          <div class="card item"><div class="ph t-sand"><span class="badge st-STORED">보관 중</span><svg width="44" height="44"><use href="#p-wallet"/></svg></div><div class="body"><span class="name">갈색 반지갑</span><span class="meta">학생회관 앞 푸드트럭 · 1시간 전</span></div></div>
+          <div class="card item"><div class="ph private"><span class="badge st-STORED">보관 중</span><svg width="30" height="30"><use href="#p-lock"/></svg></div><div class="body"><span class="name">김*국 학생증</span><span class="meta">대운동장 · 3시간 전</span></div></div>
+          <div class="card item"><div class="ph t-blue"><span class="badge st-STORED">보관 중</span><svg width="44" height="44"><use href="#p-umbrella"/></svg></div><div class="body"><span class="name">남색 3단 우산</span><span class="meta">청심대 · 3시간 전</span></div></div>
+          <div class="card item"><div class="ph t-rose"><span class="badge st-STORED">보관 중</span><svg width="44" height="44"><use href="#p-phone"/></svg></div><div class="body"><span class="name">아이폰 (투명 케이스)</span><span class="meta">메인무대 앞 · 2일 전</span></div></div>
+          <div class="card item ghost"><div class="ph private"><span class="badge st-RETURNED">인계 완료</span></div><div class="body"><span class="name">회색 에코백</span><span class="meta">주인에게 돌아갔어요</span></div></div>
+        </div>
+      </div></div>
+      <div class="bottom-actions"><button class="btn green">분실 신고하기</button></div>
+    </div>
+    <div class="frame-note">메뉴에서 들어오는 첫 화면(/lost-found)입니다. 분류 칩은 가로로 스크롤되고, 최근 등록순으로 2열 카드가 나옵니다. 흐리게 표시한 "인계 완료" 카드는 "보관 중만 보기"를 껐을 때만 나오며, 사진 없이 이름만 보이고 눌러도 상세로 들어가지 않습니다. 신분증·카드는 목록에서도 사진 대신 자물쇠만 보입니다. "분실 신고하기"는 긴급 신고의 분실물 유형 작성 화면으로 이동합니다.</div>
+  </div>
+
+  <!-- L2 -->
+  <div class="frame-wrap">
+    <div class="frame-name">L2 · 습득물 상세</div>
+    <div class="frame">
+      <div class="header"><span class="back"><svg width="8" height="13"><use href="#i-back"/></svg></span><h1>습득물 상세</h1></div>
+      <div class="surface"><div class="pad tight">
+        <div class="ph hero"><svg width="72" height="72"><use href="#p-buds"/></svg><span class="tag">사진 1장</span></div>
+        <div class="summary">
+          <div class="row1"><span class="badge pill">전자기기</span><span>11.11. 17:45 등록</span></div>
+          <h2>검은색 에어팟 케이스</h2>
+          <div class="state"><span class="led"></span><span>보관 중</span><span class="bar"></span><span>상황실에서 찾아가실 수 있어요</span></div>
+        </div>
+        <h2 class="section-title"><svg width="15" height="12"><use href="#i-mega"/></svg>습득 장소</h2>
+        <div class="card text-card">노천극장 객석 왼쪽 계단</div>
+        <h2 class="section-title"><svg width="15" height="12"><use href="#i-mega"/></svg>습득 일시</h2>
+        <div class="card text-card">11.11. 17:40</div>
+        <h2 class="section-title"><svg width="15" height="12"><use href="#i-mega"/></svg>보관 장소</h2>
+        <div class="card text-card">상황실</div>
+        <h2 class="section-title"><svg width="15" height="12"><use href="#i-mega"/></svg>특징</h2>
+        <div class="card text-card">검은색 실리콘 케이스에 노란색 스티커가 붙어 있어요. 이어폰은 양쪽 모두 들어 있습니다.</div>
+        <h2 class="section-title" style="margin-top:8px"><svg width="15" height="12"><use href="#i-mega"/></svg>찾으러 오실 때</h2>
+        <div class="card guide"><ol><li>학생증 또는 신분증 지참</li><li>물건의 특징을 설명해 주세요</li><li>축제 운영 시간 안에 상황실 방문</li></ol></div>
+      </div></div>
+      <div class="bottom-actions"><button class="btn green">상황실 위치 보기</button><button class="btn outline-green"><svg width="16" height="16"><use href="#i-call"/></svg>상황실 전화하기</button></div>
+    </div>
+    <div class="frame-note">카드를 누르면 열리는 상세(/lost-found/:id)입니다. 요약 카드는 신고 요약 카드와 같은 초록 그라데이션에 분류 알약을 씁니다. "상황실 위치 보기"는 지도에서 상황실을 선택한 상태로 열고, "상황실 전화하기"는 전화 앱을 엽니다.</div>
+  </div>
+
+  <!-- L3 -->
+  <div class="frame-wrap">
+    <div class="frame-name">L3 · 민감 물품 상세</div>
+    <div class="frame">
+      <div class="header"><span class="back"><svg width="8" height="13"><use href="#i-back"/></svg></span><h1>습득물 상세</h1></div>
+      <div class="surface"><div class="pad tight">
+        <div class="summary">
+          <div class="row1"><span class="badge pill">신분증</span><span>11.11. 14:50 등록</span></div>
+          <h2>김*국 학생증</h2>
+          <div class="state"><span class="led"></span><span>보관 중</span><span class="bar"></span><span>상황실에서 찾아가실 수 있어요</span></div>
+        </div>
+        <h2 class="section-title"><svg width="15" height="12"><use href="#i-mega"/></svg>습득 장소</h2>
+        <div class="card text-card">대운동장 입구</div>
+        <h2 class="section-title"><svg width="15" height="12"><use href="#i-mega"/></svg>습득 일시</h2>
+        <div class="card text-card">11.11. 14:45</div>
+        <h2 class="section-title"><svg width="15" height="12"><use href="#i-mega"/></svg>보관 장소</h2>
+        <div class="card text-card">상황실</div>
+        <h2 class="section-title"><svg width="15" height="12"><use href="#i-mega"/></svg>특징</h2>
+        <div class="card text-card" style="color:#6b6b6b">이름 일부만 표시됩니다.</div>
+        <h2 class="section-title" style="margin-top:8px"><svg width="15" height="12"><use href="#i-mega"/></svg>찾으러 오실 때</h2>
+        <div class="card guide"><ol><li>학생증 또는 신분증 지참</li><li>물건의 특징을 설명해 주세요</li><li>축제 운영 시간 안에 상황실 방문</li></ol></div>
+      </div></div>
+      <div class="bottom-actions"><button class="btn green">상황실 위치 보기</button><button class="btn outline-green"><svg width="16" height="16"><use href="#i-call"/></svg>상황실 전화하기</button></div>
+    </div>
+    <div class="frame-note">신분증·카드처럼 개인정보가 담긴 물품은 사진 영역 없이 글자 정보만 보여주고, 이름은 가운데를 가립니다. 학번·카드번호 같은 정보는 어디에도 노출하지 않습니다.</div>
+  </div>
+
+  <!-- L4 -->
+  <div class="frame-wrap">
+    <div class="frame-name">L4 · 검색 결과 없음</div>
+    <div class="frame">
+      <div class="header"><span class="back"><svg width="8" height="13"><use href="#i-back"/></svg></span><h1>분실물센터</h1></div>
+      <div class="surface"><div class="pad">
+        <div class="card guide">
+          <p>습득물은 상황실에서 보관합니다.<br />본인 확인 후 찾아가실 수 있어요.</p>
+          <dl><dt>보관 장소</dt><dd>상황실</dd><dt>운영 시간</dt><dd>축제 운영 시간과 동일</dd><dt>축제 종료 후</dt><dd>남은 물건은 총학생회로 이관</dd></dl>
+        </div>
+        <div class="chips"><span class="chip">전체</span><span class="chip on">전자기기</span><span class="chip">지갑·카드</span><span class="chip">신분증</span><span class="chip">의류·잡화</span><span class="chip">기타</span></div>
+        <div class="control search filled"><svg width="16" height="16"><use href="#p-search"/></svg>갤럭시 버즈<span class="trail"><svg width="14" height="14"><use href="#p-x"/></svg></span></div>
+        <div class="tool-row"><span>습득물 0건</span><span class="tg">보관 중만 보기<span class="switch on"></span></span></div>
+        <div class="card empty">
+          <svg width="40" height="40"><use href="#p-search"/></svg>
+          <b>조건에 맞는 습득물이 없어요</b>
+          <span>찾는 물건이 없다면 분실 신고를 남겨주세요.</span>
+        </div>
+      </div></div>
+      <div class="bottom-actions"><button class="btn green">분실 신고하기</button></div>
+    </div>
+    <div class="frame-note">검색어와 분류, "보관 중만 보기" 조건을 모두 적용한 결과가 없을 때의 모습입니다. 검색창 오른쪽 ×로 검색어를 지울 수 있고, 하단 버튼으로 바로 분실 신고를 남길 수 있습니다.</div>
+  </div>
+</div>
+
+<!-- ========================= 관리자 ========================= -->
+<div class="section-label">관리자 (SUPER_ADMIN)</div>
+<div class="board">
+
+  <!-- A1 -->
+  <div class="frame-wrap">
+    <div class="frame-name">A1 · 습득물 관리 목록</div>
+    <div class="frame">
+      <div class="header"><span class="back"><svg width="8" height="13"><use href="#i-back"/></svg></span><h1>분실물센터</h1></div>
+      <div class="surface"><div class="pad tight">
+        <div class="counts">
+          <div class="cell"><span class="badge st-STORED">보관 중</span><span class="num">07</span></div>
+          <div class="cell"><span class="badge st-RETURNED">인계 완료</span><span class="num">12</span></div>
+          <div class="cell"><span class="badge st-REPORT">전체</span><span class="num">19</span></div>
+        </div>
+        <h2 class="section-title" style="margin-top:8px"><svg width="15" height="12"><use href="#i-mega"/></svg>등록된 습득물</h2>
+        <div class="chips"><span class="chip on">전체</span><span class="chip">전자기기</span><span class="chip">지갑·카드</span><span class="chip">신분증</span><span class="chip">의류·잡화</span><span class="chip">기타</span></div>
+        <div class="chips compact"><span class="chip on">전체</span><span class="chip">보관 중</span><span class="chip">인계 완료</span></div>
+        <div class="card rows">
+          <div class="row"><div class="ph"><svg width="24" height="24"><use href="#p-buds"/></svg></div><div class="body"><span class="name">검은색 에어팟 케이스</span><span class="meta">전자기기 · 노천극장 · 12분 전</span></div><span class="badge st-STORED">보관 중</span><svg width="18" height="18"><use href="#i-chev"/></svg></div>
+          <div class="row"><div class="ph t-sand"><svg width="24" height="24"><use href="#p-wallet"/></svg></div><div class="body"><span class="name">갈색 반지갑</span><span class="meta">지갑·카드 · 학생회관 앞 푸드트럭 · 1시간 전</span></div><span class="badge st-STORED">보관 중</span><svg width="18" height="18"><use href="#i-chev"/></svg></div>
+          <div class="row"><div class="ph private"><svg width="22" height="22"><use href="#p-id"/></svg></div><div class="body"><span class="name">김*국 학생증</span><span class="meta">신분증 · 대운동장 · 3시간 전</span></div><span class="badge st-STORED">보관 중</span><svg width="18" height="18"><use href="#i-chev"/></svg></div>
+          <div class="row"><div class="ph t-blue"><svg width="24" height="24"><use href="#p-umbrella"/></svg></div><div class="body"><span class="name">남색 3단 우산</span><span class="meta">의류·잡화 · 청심대 · 3시간 전</span></div><span class="badge st-STORED">보관 중</span><svg width="18" height="18"><use href="#i-chev"/></svg></div>
+          <div class="row"><div class="ph t-sand"><svg width="24" height="24"><use href="#p-key"/></svg></div><div class="body"><span class="name">곰돌이 키링 열쇠</span><span class="meta">기타 · 공학관 1층 · 1일 전</span></div><span class="badge st-RETURNED">인계 완료</span><svg width="18" height="18"><use href="#i-chev"/></svg></div>
+          <div class="row"><div class="ph t-rose"><svg width="24" height="24"><use href="#p-card"/></svg></div><div class="body"><span class="name">초록색 체크카드</span><span class="meta">지갑·카드 · 메인무대 앞 · 2일 전</span></div><span class="badge st-RETURNED">인계 완료</span><svg width="18" height="18"><use href="#i-chev"/></svg></div>
+          <div class="row"><div class="ph"><svg width="24" height="24"><use href="#p-bag"/></svg></div><div class="body"><span class="name">회색 에코백</span><span class="meta">의류·잡화 · 상허기념도서관 · 2일 전</span></div><span class="badge st-RETURNED">인계 완료</span><svg width="18" height="18"><use href="#i-chev"/></svg></div>
+        </div>
+      </div></div>
+      <div class="bottom-actions"><button class="btn green">습득물 등록</button></div>
+    </div>
+    <div class="frame-note">관리자 메뉴에서 들어오는 목록(/admin/lost-items)입니다. 상단 카드는 신고 관리의 건수 카드와 같은 형태입니다. 분류 칩과 작은 상태 칩을 함께 적용해 거르며, 관리자에게는 이름을 가리지 않고 보여줍니다. 행을 누르면 상세로 이동합니다.</div>
+  </div>
+
+  <!-- A2 -->
+  <div class="frame-wrap">
+    <div class="frame-name">A2 · 습득물 등록 (입력 전)</div>
+    <div class="frame">
+      <div class="header"><span class="back"><svg width="8" height="13"><use href="#i-back"/></svg></span><h1>습득물 등록</h1></div>
+      <div class="surface"><div class="pad tight">
+        <section class="field">
+          <span class="label">사진</span>
+          <div class="picker">
+            <div class="add"><svg width="26" height="26"><use href="#p-camera"/></svg>사진 추가<span class="hint">1장, 5MB 이하</span></div>
+          </div>
+        </section>
+        <section class="field">
+          <span class="label">분류</span>
+          <div class="chips"><span class="chip">전자기기</span><span class="chip">지갑·카드</span><span class="chip">신분증</span><span class="chip">의류·잡화</span><span class="chip">기타</span></div>
+        </section>
+        <section class="field"><span class="label">물품명</span><div class="control placeholder">30자 이내</div></section>
+        <section class="field"><span class="label">습득 장소</span><div class="control placeholder">50자 이내</div></section>
+        <section class="field"><span class="label">습득 일시</span><div class="control placeholder">날짜와 시간 선택<span class="trail"><svg width="16" height="16"><use href="#p-cal"/></svg></span></div></section>
+        <section class="field"><span class="label">보관 장소</span><div class="control">상황실</div></section>
+        <section class="field"><span class="label">특징</span><div class="control area placeholder">300자 이내</div><span class="counter">0 / 300</span></section>
+        <div class="card switch-row"><div class="txt"><b>사진 공개</b><span class="hint">신분증·카드는 자동으로 비공개 처리됩니다</span></div><span class="switch on"></span></div>
+      </div></div>
+      <div class="bottom-actions"><button class="btn green" style="opacity:.45">등록하기</button><button class="btn gray">취소하기</button></div>
+    </div>
+    <div class="frame-note">등록 화면(/admin/lost-items/new)의 처음 모습입니다. "사진 추가" 버튼이 가로 전체를 차지하고, 글자 수 제한은 입력칸 안의 회색 안내 글씨로 보여줍니다. 물품명·분류·습득 장소·습득 일시가 비어 있으면 "등록하기"를 누를 수 없습니다.</div>
+  </div>
+
+  <!-- A2-2 -->
+  <div class="frame-wrap">
+    <div class="frame-name">A2-2 · 습득물 등록 (입력 후)</div>
+    <div class="frame">
+      <div class="header"><span class="back"><svg width="8" height="13"><use href="#i-back"/></svg></span><h1>습득물 등록</h1></div>
+      <div class="surface"><div class="pad tight">
+        <section class="field">
+          <span class="label">사진</span>
+          <div class="picker">
+            <div class="thumb"><div class="ph"><svg width="72" height="72"><use href="#p-buds"/></svg></div><span class="x"><svg width="12" height="12"><use href="#p-x"/></svg></span></div>
+          </div>
+        </section>
+        <section class="field">
+          <span class="label">분류</span>
+          <div class="chips"><span class="chip on">전자기기</span><span class="chip">지갑·카드</span><span class="chip">신분증</span><span class="chip">의류·잡화</span><span class="chip">기타</span></div>
+        </section>
+        <section class="field"><span class="label">물품명</span><div class="control">검은색 에어팟 케이스</div></section>
+        <section class="field"><span class="label">습득 장소</span><div class="control">노천극장 객석 왼쪽 계단</div></section>
+        <section class="field"><span class="label">습득 일시</span><div class="control">11.11. 17:40<span class="trail"><svg width="16" height="16"><use href="#p-cal"/></svg></span></div></section>
+        <section class="field"><span class="label">보관 장소</span><div class="control">상황실</div></section>
+        <section class="field"><span class="label">특징</span><div class="control area">검은색 실리콘 케이스에 노란색 스티커가 붙어 있어요. 이어폰은 양쪽 모두 들어 있습니다.</div><span class="counter">47 / 300</span></section>
+        <div class="card switch-row"><div class="txt"><b>사진 공개</b><span class="hint">신분증·카드는 자동으로 비공개 처리됩니다</span></div><span class="switch on"></span></div>
+      </div></div>
+      <div class="bottom-actions"><button class="btn green">등록하기</button><button class="btn gray">취소하기</button></div>
+    </div>
+    <div class="frame-note">사진을 고르면 "사진 추가" 버튼 자리에 사진이 가로 전체로 들어갑니다. 오른쪽 위 ×로 지우면 다시 버튼으로 돌아가고, 사진을 누르면 다른 사진으로 바꿉니다. 분류 칩은 목록 화면과 같이 한 줄로 나오고, 넘치는 칩은 옆으로 끌어서 봅니다. 분류를 신분증이나 지갑·카드로 고르면 "사진 공개" 스위치가 꺼진 채로 잠깁니다.</div>
+  </div>
+
+  <!-- A3 -->
+  <div class="frame-wrap">
+    <div class="frame-name">A3 · 습득물 상세 (보관 중)</div>
+    <div class="frame">
+      <div class="header"><span class="back"><svg width="8" height="13"><use href="#i-back"/></svg></span><h1>습득물 상세</h1></div>
+      <div class="surface"><div class="pad tight">
+        <div class="ph hero" style="height:180px"><svg width="64" height="64"><use href="#p-buds"/></svg><span class="tag">공개 중</span></div>
+        <div class="summary">
+          <div class="row1"><span class="badge pill">전자기기</span><span>11.11. 17:45 등록</span></div>
+          <h2>검은색 에어팟 케이스</h2>
+          <div class="state"><span class="led"></span><span>보관 중</span><span class="bar"></span><span>등록 총괄 관리자</span></div>
+        </div>
+        <div class="links"><span>수정</span><span class="del">삭제</span></div>
+        <h2 class="section-title"><svg width="15" height="12"><use href="#i-mega"/></svg>습득 정보</h2>
+        <div class="card kv">
+          <div><span>습득 장소</span><b>노천극장 객석 왼쪽 계단</b></div>
+          <div><span>습득 일시</span><b>11.11. 17:40</b></div>
+          <div><span>보관 장소</span><b>상황실</b></div>
+        </div>
+        <h2 class="section-title"><svg width="15" height="12"><use href="#i-mega"/></svg>특징</h2>
+        <div class="card text-card">검은색 실리콘 케이스에 노란색 스티커가 붙어 있어요. 이어폰은 양쪽 모두 들어 있습니다.</div>
+        <h2 class="section-title" style="margin-top:8px"><svg width="15" height="12"><use href="#i-mega"/></svg>비슷한 분실 신고<span class="more">후보 1건 · 2단계</span></h2>
+        <div class="card rows">
+          <div class="row"><span class="badge st-REPORT">분실물</span><div class="body"><span class="name">검은색 에어팟 케이스를 잃어버렸어요</span><span class="meta">노천극장 · 2시간 전</span></div><span class="link">연결</span></div>
+        </div>
+        <div class="hint">물품명의 단어("에어팟", "케이스")가 제목·내용에 들어 있는 <b>분실물 유형 신고</b>를 보여줍니다. 내용을 확인하고 <b>연결</b>을 누르면 신고자에게 "상황실에서 보관 중" 알림이 갑니다.</div>
+      </div></div>
+      <div class="bottom-actions"><button class="btn green">인계 완료 처리</button></div>
+    </div>
+    <div class="frame-note">관리자 상세(/admin/lost-items/:id)입니다. 습득 정보는 한 카드에 묶어 길이를 줄였습니다. "수정"은 등록 화면과 같은 폼으로, "삭제"는 확인 팝업을 거칩니다. "비슷한 분실 신고"는 2단계 기능입니다. 서버가 물품명 단어로 처리 중인 분실 신고를 찾아 후보로 보여줄 뿐이고, 관리자가 "연결"을 눌러야 연결됩니다. 후보가 없으면 구역을 숨깁니다.</div>
+  </div>
+
+  <!-- A4 -->
+  <div class="frame-wrap">
+    <div class="frame-name">A4 · 인계 완료 처리 팝업</div>
+    <div class="frame">
+      <div class="header"><span class="back"><svg width="8" height="13"><use href="#i-back"/></svg></span><h1>습득물 상세</h1></div>
+      <div class="surface"><div class="pad tight">
+        <div class="ph hero" style="height:180px"><svg width="64" height="64"><use href="#p-buds"/></svg></div>
+        <div class="summary">
+          <div class="row1"><span class="badge pill">전자기기</span><span>11.11. 17:45 등록</span></div>
+          <h2>검은색 에어팟 케이스</h2>
+          <div class="state"><span class="led"></span><span>보관 중</span></div>
+        </div>
+        <h2 class="section-title"><svg width="15" height="12"><use href="#i-mega"/></svg>습득 정보</h2>
+        <div class="card kv">
+          <div><span>습득 장소</span><b>노천극장 객석 왼쪽 계단</b></div>
+          <div><span>습득 일시</span><b>11.11. 17:40</b></div>
+          <div><span>보관 장소</span><b>상황실</b></div>
+        </div>
+      </div></div>
+      <div class="bottom-actions"><button class="btn green">인계 완료 처리</button></div>
+      <div class="dim"><div class="dialog">
+        <h3>인계 완료 처리</h3>
+        <p>물건을 찾아간 분의 정보를 남겨 주세요.</p>
+        <div class="form">
+          <section class="field"><span class="label">수령인 이름</span><div class="control">김건국</div></section>
+          <section class="field"><span class="label">연락처</span><div class="control">01012341234</div></section>
+          <section class="field"><span class="label">본인 확인</span><div class="chips"><span class="chip on">학생증</span><span class="chip">신분증</span><span class="chip">기타</span></div></section>
+          <section class="field"><span class="label">메모</span><div class="control"><span class="ph-text">100자 이내</span></div></section>
+        </div>
+        <div class="row-btn"><button class="btn gray">취소</button><button class="btn green">완료 처리</button></div>
+      </div></div>
+    </div>
+    <div class="frame-note">"인계 완료 처리"를 누르면 뜨는 팝업입니다. 수령인 이름·본인 확인 방법은 필수, 연락처·메모는 선택입니다. "완료 처리"를 누르면 상태가 인계 완료로 바뀌고, 방문자는 그 물건의 상세에 더 이상 들어갈 수 없습니다.</div>
+  </div>
+
+  <!-- A5 -->
+  <div class="frame-wrap">
+    <div class="frame-name">A5 · 습득물 상세 (인계 완료)</div>
+    <div class="frame">
+      <div class="header"><span class="back"><svg width="8" height="13"><use href="#i-back"/></svg></span><h1>습득물 상세</h1></div>
+      <div class="surface"><div class="pad tight">
+        <div class="ph hero ghost" style="height:180px"><svg width="64" height="64"><use href="#p-buds"/></svg></div>
+        <div class="summary off">
+          <div class="row1"><span class="badge pill">전자기기</span><span>11.11. 17:45 등록</span></div>
+          <h2>검은색 에어팟 케이스</h2>
+          <div class="state"><span>인계 완료</span><span class="bar"></span><span>11.11. 18:05</span></div>
+        </div>
+        <h2 class="section-title"><svg width="15" height="12"><use href="#i-mega"/></svg>인계 정보</h2>
+        <div class="card kv">
+          <div><span>수령인</span><b>김*국</b></div>
+          <div><span>연락처</span><b>010-****-1234</b><span class="link">연락처 보기</span></div>
+          <div><span>본인 확인</span><b>학생증</b></div>
+          <div><span>인계 시각</span><b>11.11. 18:05</b></div>
+          <div><span>처리자</span><b>총괄 관리자</b></div>
+        </div>
+        <h2 class="section-title" style="margin-top:8px"><svg width="15" height="12"><use href="#i-mega"/></svg>습득 정보</h2>
+        <div class="card kv">
+          <div><span>습득 장소</span><b>노천극장 객석 왼쪽 계단</b></div>
+          <div><span>습득 일시</span><b>11.11. 17:40</b></div>
+          <div><span>보관 장소</span><b>상황실</b></div>
+        </div>
+        <h2 class="section-title"><svg width="15" height="12"><use href="#i-mega"/></svg>특징</h2>
+        <div class="card text-card">검은색 실리콘 케이스에 노란색 스티커가 붙어 있어요. 이어폰은 양쪽 모두 들어 있습니다.</div>
+      </div></div>
+      <div class="bottom-actions"><button class="btn gray">인계 취소</button></div>
+    </div>
+    <div class="frame-note">인계가 끝난 습득물은 읽기 전용이며 수정·삭제 링크가 없습니다. 수령인 이름과 연락처는 가려서 보여주고, "연락처 보기"를 누르면 전체 번호가 펼쳐지며 열람 기록이 남습니다. "인계 취소"는 확인 팝업 뒤 보관 중으로 되돌립니다.</div>
+  </div>
+</div>
+</body>
+</html>

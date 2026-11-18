@@ -7,19 +7,28 @@ import { Link } from 'react-router-dom'
 import { Page } from '../components/layout'
 import { Asset, Card, SectionTitle } from '../components/ui'
 import { figmaAssets as assets } from '../data/figma-assets'
+import { useTranslation } from 'react-i18next'
+import { LanguageToggle } from '../components/LanguageToggle'
 
-const festivalDate = (value: string) => {
+const festivalDate = (value: string, language: string) => {
   const date = seoulDate(value)
-  return `${date.slice(5, 7)}월 ${date.slice(8, 10)}일`
+  return language === 'ko'
+    ? `${date.slice(5, 7)}월 ${date.slice(8, 10)}일`
+    : new Date(`${date}T00:00:00Z`).toLocaleDateString('en-US', {
+        timeZone: 'UTC',
+        month: 'short',
+        day: 'numeric',
+      })
 }
 
 export default function MenuPage({ admin = false }: { admin?: boolean }) {
   const { festival } = useFestival()
   const auth = useAuth()
   const action = useAction()
+  const { t, i18n } = useTranslation()
   const sections = [
     {
-      title: '정보',
+      title: t('menu.info'),
       items: admin
         ? auth.account?.role === 'BOOTH_ADMIN'
           ? []
@@ -29,30 +38,36 @@ export default function MenuPage({ admin = false }: { admin?: boolean }) {
               ['부스 프로그램 관리', '/admin/booths'],
             ]
         : [
-            ['공지사항', '/notices'],
-            ['전체 프로그램', '/performances'],
-            ['부스 목록', '/booths'],
+            [t('menu.notices'), '/notices'],
+            [t('menu.programs'), '/performances'],
+            [t('menu.booths'), '/booths'],
           ],
     },
     {
-      title: '서비스',
+      title: t('menu.services'),
       items: [
-        ['행사장 지도', '/map'],
-        [admin ? 'QR 웨이팅 관리' : 'QR 웨이팅', admin ? '/admin/waiting' : '/waiting'],
+        [t('menu.map'), '/map'],
+        [admin ? 'QR 웨이팅 관리' : t('menu.waiting'), admin ? '/admin/waiting' : '/waiting'],
         ...(admin && auth.account?.role === 'SUPER_ADMIN'
           ? [['혼잡도 관리', '/admin/congestion']]
           : []),
         ...(!admin
-          ? [['긴급 신고', '/report']]
+          ? [
+              [t('menu.report'), '/report'],
+              [t('menu.lostFound'), '/lost-found'],
+            ]
           : auth.account?.role === 'SUPER_ADMIN'
-            ? [['긴급 신고 관리', '/admin/reports']]
+            ? [
+                ['긴급 신고 관리', '/admin/reports'],
+                ['분실물센터 관리', '/admin/lost-items'],
+              ]
             : []),
       ],
     },
-    { title: '기타', items: [['이용 안내', '/guide']] },
+    { title: t('menu.etc'), items: [[t('menu.guide'), '/guide']] },
   ]
   return (
-    <Page title={admin ? '관리자 메뉴' : '전체 메뉴'} plain nav>
+    <Page title={admin ? '관리자 메뉴' : t('menu.title')} plain nav>
       <div className={`page-pad !pt-6 ${admin ? 'gap-5' : '!gap-3'}`}>
         {admin && (
           <Card className="flex items-center gap-3 p-4">
@@ -82,15 +97,21 @@ export default function MenuPage({ admin = false }: { admin?: boolean }) {
             <span>FIM</span>
           </div>
           <div>
-            <p className="text-sm font-bold">{festival?.name || '축제 정보 준비 중'}</p>
+            <p className="text-sm font-bold">{festival?.name || t('menu.festivalPending')}</p>
             <p className="mt-1.5 text-xs font-medium">
               {festival
-                ? `${festivalDate(festival.startAt)} ~ ${festivalDate(festival.endAt)}`
+                ? `${festivalDate(festival.startAt, i18n.language)} ~ ${festivalDate(festival.endAt, i18n.language)}`
                 : ''}
             </p>
           </div>
         </Card>
 
+        {!admin && (
+          <Card className="flex items-center justify-between px-4 py-3 text-base font-bold text-[#383838]">
+            {t('common.language')}
+            <LanguageToggle />
+          </Card>
+        )}
         {sections
           .filter((section) => section.items.length)
           .map((section) => (

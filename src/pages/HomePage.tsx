@@ -10,16 +10,11 @@ import { useFestivalApi } from '../hooks/useFestivalApi'
 import { useResource } from '../hooks/useResource'
 import { pollEvery, useRealtimeConnected, useTopic } from '../apis/realtime'
 import { RequestState } from '../components/RequestState'
-
-const congestionLabels = {
-  SMOOTH: '원활',
-  NORMAL: '보통',
-  CROWDED: '혼잡',
-  VERY_CROWDED: '매우 혼잡',
-}
+import { useTranslation } from 'react-i18next'
 
 export default function HomePage() {
   const [showNotice, setShowNotice] = useState(true)
+  const { t } = useTranslation()
   const { performances, notices, festival, stages } = useFestival()
   const stageLoader = useCallback(async () => (await useFestivalApi.stages()).data.data, [])
   const live = useRealtimeConnected()
@@ -36,13 +31,13 @@ export default function HomePage() {
   const primaryStageId = primaryStage?.stageId
   const today = seoulDate(festival?.serverTime || new Date().toISOString())
   const shortcuts = [
-    { to: '/map', label: '축제 지도', icon: a.imgVector3 },
-    { to: '/waiting', label: 'QR 웨이팅', icon: a.imgGroup },
-    { to: '/notices', label: '공지사항', icon: a.imgGroup1 },
-    { to: '/performances', label: '무대 일정', icon: a.imgGroup3 },
+    { to: '/map', label: t('home.shortcutMap'), icon: a.imgVector3 },
+    { to: '/waiting', label: t('home.shortcutWaiting'), icon: a.imgGroup },
+    { to: '/notices', label: t('home.shortcutNotices'), icon: a.imgGroup1 },
+    { to: '/performances', label: t('home.shortcutShows'), icon: a.imgGroup3 },
   ]
   return (
-    <Page title="홈" home nav>
+    <Page title={t('home.title')} home nav>
       <div className="page-pad !pt-5.5">
         {showNotice && (
           <EmergencyBanner
@@ -52,14 +47,20 @@ export default function HomePage() {
         )}
         <section className="green-gradient flex flex-col gap-2 rounded-xl p-3.5 shadow-card">
           <FestivalMeta />
-          <h2 className="text-base font-bold text-white">건대항쟁의 순간을 직접 체험하세요!</h2>
+          <h2 className="text-base font-bold text-white">{t('home.slogan')}</h2>
           <Stats
             items={[
-              { label: '현재 운영 부스', value: `${festival?.summary.operatingBoothCount ?? 0}개` },
-              { label: '오늘의 공연', value: `${festival?.summary.todayPerformanceCount ?? 0}건` },
               {
-                label: '무대 혼잡도',
-                value: primaryZone?.level ? congestionLabels[primaryZone.level] : '정보 없음',
+                label: t('home.openBooths'),
+                value: t('home.boothCount', { count: festival?.summary.operatingBoothCount ?? 0 }),
+              },
+              {
+                label: t('home.todayShows'),
+                value: t('home.showCount', { count: festival?.summary.todayPerformanceCount ?? 0 }),
+              },
+              {
+                label: t('home.stageCrowd'),
+                value: primaryZone?.level ? t(`congestion.${primaryZone.level}`) : t('home.noInfo'),
               },
             ]}
           />
@@ -80,7 +81,7 @@ export default function HomePage() {
           ))}
         </div>
         <section className="flex flex-col gap-2">
-          <SectionTitle>현재 진행 중인 프로그램</SectionTitle>
+          <SectionTitle>{t('home.nowPlaying')}</SectionTitle>
           {currentPerformances.length ? (
             currentPerformances.map((item, index) => (
               <Link
@@ -101,11 +102,11 @@ export default function HomePage() {
               </Link>
             ))
           ) : (
-            <EmptyState>현재 진행 중인 프로그램이 없어요.</EmptyState>
+            <EmptyState>{t('home.nothingNow')}</EmptyState>
           )}
         </section>
         <section className="flex flex-col gap-2">
-          <SectionTitle>오늘의 무대</SectionTitle>
+          <SectionTitle>{t('home.todayStage')}</SectionTitle>
           <ScheduleList
             items={performances.filter(
               (p) =>
