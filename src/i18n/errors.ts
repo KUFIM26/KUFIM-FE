@@ -1,0 +1,22 @@
+// 서버 오류 문구는 한국어로만 내려온다. 영어 화면에서는 오류 코드로 영어 문구를 고르고,
+// 여기에 없는 코드는 일반 문구로 대신한다. (같은 코드를 여러 뜻으로 쓰는 C001, C005는 넣지 않는다.)
+export const englishErrors: Record<string, string> = {
+  B001: "We couldn't find this booth.",
+  B002: 'This QR code is not valid.',
+  C002: 'You need to agree to the use of your personal information.',
+  C003: "We couldn't identify your device. Please reload and try again.",
+  M003: 'No map has been registered.',
+  N001: "We couldn't find this notification.",
+  R001: "We couldn't find this report.",
+  R002: 'This report was submitted from another device.',
+  R003: 'This report is already closed.',
+  R005: 'A report that has been received can no longer be canceled.',
+  W001: "You're already in a queue.",
+  W002: 'This booth is not accepting new entries right now.',
+  W003: 'This ticket was issued on another device.',
+  W004: "We couldn't find this ticket.",
+  W005: "This booth doesn't use the waiting list.",
+  W006: 'This ticket has already ended.',
+  L001: "We couldn't find this item.",
+  RESOURCE_NOT_FOUND: "We couldn't find what you were looking for.",
+}

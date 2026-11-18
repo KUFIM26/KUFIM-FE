@@ -1,5 +1,7 @@
 import axios from 'axios'
 import type { ApiResponse } from './type'
+import i18n from '../i18n'
+import { englishErrors } from '../i18n/errors'
 
 export const SESSION_EXPIRED = 'kufim:session-expired'
 const CLIENT_TOKEN_KEY = 'kufim.clientToken'
@@ -40,7 +42,7 @@ api.interceptors.response.use(
       (response.data?.success !== true ||
         !Object.prototype.hasOwnProperty.call(response.data, 'data'))
     ) {
-      throw new Error('서버 응답을 읽을 수 없습니다. API 연결 설정을 확인해주세요.')
+      throw new Error(i18n.t('errors.badResponse'))
     }
     return response
   },
@@ -69,15 +71,15 @@ api.interceptors.response.use(
 
 export function errorMessage(error: unknown): string {
   if (axios.isAxiosError<ApiResponse<unknown>>(error)) {
-    if (error.response?.status === 429) return '요청이 많습니다. 잠시 후 다시 시도해주세요.'
-    return (
-      error.response?.data?.error?.message ||
-      (error.response
-        ? '요청을 처리하지 못했습니다.'
-        : '서버에 연결하지 못했습니다. 잠시 후 다시 시도해주세요.')
-    )
+    if (error.response?.status === 429) return i18n.t('errors.tooMany')
+    if (!error.response) return i18n.t('errors.offline')
+    const serverError = error.response.data?.error
+    // 서버 문구는 한국어뿐이라, 영어 화면에서는 코드로 고른 문구나 일반 문구를 보여준다.
+    if (i18n.language !== 'ko')
+      return englishErrors[serverError?.code ?? ''] || i18n.t('errors.failed')
+    return serverError?.message || i18n.t('errors.failed')
   }
-  return error instanceof Error ? error.message : '요청을 처리하지 못했습니다.'
+  return error instanceof Error ? error.message : i18n.t('errors.failed')
 }
 
 export function isNotFound(error: unknown) {

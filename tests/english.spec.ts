@@ -101,6 +101,83 @@ test.describe('English device', () => {
     )
   })
 
+  test('report and lost & found are English; server errors are shown by code', async ({ page }) => {
+    await mockApi(page)
+    const envelope = (data: unknown) => ({ json: { success: true, data, error: null } })
+    await page.route('**/api/v1/reports/me', (route) => route.fulfill(envelope({ content: [] })))
+    await page.route('**/api/v1/lost-items**', (route) => {
+      const path = new URL(route.request().url()).pathname
+      if (path.endsWith('/lost-items/3'))
+        return route.fulfill({
+          status: 409,
+          json: {
+            success: false,
+            data: null,
+            error: { code: 'W001', message: '이미 활성 대기표가 있습니다.' },
+          },
+        })
+      if (path.endsWith('/lost-items/4'))
+        return route.fulfill({
+          status: 400,
+          json: { success: false, data: null, error: { code: 'X999', message: '알 수 없는 오류' } },
+        })
+      return route.fulfill(
+        envelope({
+          content: [
+            {
+              lostItemId: 1,
+              category: 'ID_CARD',
+              name: '김*국 학생증',
+              status: 'STORED',
+              createdAt: '2026-11-11T17:45:00+09:00',
+              foundPlace: '대운동장',
+              foundAt: '2026-11-11T17:40:00+09:00',
+              storagePlace: '상황실',
+              description: null,
+              imageUrl: null,
+              thumbnailUrl: null,
+              elapsedMinutes: 180,
+            },
+          ],
+          page: 0,
+          totalPages: 1,
+          totalElements: 1,
+        }),
+      )
+    })
+    await page.goto('/report')
+    await expect(page.getByRole('link', { name: 'Call the control room' })).toBeVisible()
+    await expect(page.getByText("You haven't submitted any reports yet.")).toBeVisible()
+    await page.getByRole('button', { name: 'Progress' }).click()
+    await expect(page.getByRole('dialog')).toContainText('Staff are taking action.')
+    await expect(page.getByRole('dialog')).toContainText('In progress')
+    await page.getByRole('button', { name: 'Close' }).click()
+    await page.getByRole('link', { name: 'Submit report' }).click()
+    await expect(page.getByRole('button', { name: 'Lost item' })).toBeVisible()
+    await expect(page.getByPlaceholder('Enter a title (up to 30 characters)')).toBeVisible()
+    for (const width of [320, 393]) {
+      await page.setViewportSize({ width, height: 898 })
+      expect(await fits(page)).toBe(true)
+    }
+    await page.screenshot({ path: 'test-results/english-report.png', fullPage: true })
+
+    await page.goto('/lost-found')
+    await expect(page.getByRole('heading', { name: 'Lost & Found' })).toBeVisible()
+    await expect(page.getByText('Found items: 1')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Wallet / Card' })).toBeVisible()
+    await expect(page.getByText('3 hr ago')).toBeVisible()
+    await expect(page.getByText('In storage', { exact: true })).toBeVisible()
+    expect(await fits(page)).toBe(true)
+    await page.screenshot({ path: 'test-results/english-lost.png', fullPage: true })
+
+    // 아는 코드는 그 뜻의 영어 문구로, 모르는 코드는 일반 문구로 보여주고 한국어는 노출하지 않는다.
+    await page.goto('/lost-found/3')
+    await expect(page.getByRole('alert')).toHaveText("You're already in a queue.")
+    await page.goto('/lost-found/4')
+    await expect(page.getByRole('alert')).toHaveText("We couldn't process your request.")
+    await expect(page.getByText('알 수 없는 오류')).toHaveCount(0)
+  })
+
   test('admin screens stay Korean even when English is selected', async ({ page }) => {
     await mockApi(page, { loggedIn: true })
     await page.goto('/admin')

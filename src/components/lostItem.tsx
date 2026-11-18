@@ -4,9 +4,14 @@ import { Asset, Card } from './ui'
 import { lostItemCategories, lostItemStatuses, sensitiveCategories } from '../apis/lostItem'
 import type { AdminLostItem, LostItem, LostItemStatus } from '../apis/lostItem'
 import { reportAssets, reportDate, reportElapsed } from '../data/report-design'
+import { useTranslation } from 'react-i18next'
+import { useLabel } from '../i18n/label'
 
 export function LostItemBadge({ status }: { status: LostItemStatus }) {
-  return <span className={`report-badge lost-status-${status}`}>{lostItemStatuses[status]}</span>
+  const label = useLabel()
+  return (
+    <span className={`report-badge lost-status-${status}`}>{label(lostItemStatuses[status])}</span>
+  )
 }
 
 /** 사진이 없거나 비공개일 때 목록에서 자리를 채우는 그림. 문구는 넣지 않는다. */
@@ -52,6 +57,7 @@ function Thumb({ item, className = '' }: { item: LostItem; className?: string })
 
 /** 방문자 목록: 2열 사진 카드. 인계 완료된 물건은 눌리지 않는다. */
 export function LostItemGrid({ items }: { items: LostItem[] }) {
+  const { t } = useTranslation()
   return (
     <ul className="grid grid-cols-2 gap-3">
       {items.map((item) => {
@@ -67,7 +73,7 @@ export function LostItemGrid({ items }: { items: LostItem[] }) {
               <h3 className="truncate text-sm font-bold text-[#1a1a1a]">{item.name}</h3>
               <p className="truncate text-[11px] font-medium text-[#6b6b6b]">
                 {item.status === 'RETURNED'
-                  ? '주인에게 돌아갔어요'
+                  ? t('lost.returned')
                   : [
                       item.foundPlace,
                       item.elapsedMinutes !== null && reportElapsed(item.elapsedMinutes),
@@ -127,16 +133,22 @@ export function AdminLostItemRows({ items }: { items: AdminLostItem[] }) {
 /** 상세 상단 요약 카드. 신고 요약 카드와 같은 형태다. */
 export function LostItemSummary({ item, children }: { item: LostItem; children?: ReactNode }) {
   const returned = item.status === 'RETURNED'
+  const { t } = useTranslation()
+  const label = useLabel()
   return (
     <section
       className={`rounded-xl p-3.5 text-white shadow-card ${returned ? 'bg-[#6f6f6f]' : 'green-gradient'}`}
     >
       <div className="mb-2 flex items-center gap-2.5">
-        <span className="report-badge bg-white/50">{lostItemCategories[item.category]}</span>
-        <time className="text-xs">{reportDate(item.createdAt)} 등록</time>
+        <span className="report-badge bg-white/50">{label(lostItemCategories[item.category])}</span>
+        <time className="text-xs">
+          {t('lost.registered', { time: reportDate(item.createdAt) })}
+        </time>
       </div>
       <h2 className="text-lg font-bold">{item.name}</h2>
-      <p className="mt-2 text-xs font-semibold">{children ?? lostItemStatuses[item.status]}</p>
+      <p className="mt-2 text-xs font-semibold">
+        {children ?? label(lostItemStatuses[item.status])}
+      </p>
     </section>
   )
 }

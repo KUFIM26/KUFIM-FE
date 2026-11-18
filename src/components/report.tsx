@@ -5,6 +5,8 @@ import { Asset, Button, Card } from './ui'
 import { reportLabels, reportSteps, reportCategories } from '../apis/report'
 import type { Report, ReportStatus } from '../apis/report'
 import { reportAssets, reportDate, reportElapsed } from '../data/report-design'
+import { useTranslation } from 'react-i18next'
+import { useLabel } from '../i18n/label'
 const base = '/assets/figma/reports'
 export function ReportHeading({
   children,
@@ -27,15 +29,14 @@ export function ReportHeading({
   )
 }
 export function ReportBadge({ status }: { status: ReportStatus }) {
-  return <span className={`report-badge report-status-${status}`}>{reportLabels[status]}</span>
+  const label = useLabel()
+  return (
+    <span className={`report-badge report-status-${status}`}>{label(reportLabels[status])}</span>
+  )
 }
 export function ReportLegend() {
-  const descriptions = [
-    '신고가 신청되었습니다.',
-    '신고 내용을 관리자가 확인하였습니다.',
-    '신고 내용을 확인하여 조치 중입니다.',
-    '신고 처리가 완료되었습니다.',
-  ]
+  const { t } = useTranslation()
+  const descriptions = [t('report.step1'), t('report.step2'), t('report.step3'), t('report.step4')]
   const ref = useRef<HTMLDialogElement>(null)
   const id = useId()
   return (
@@ -48,7 +49,7 @@ export function ReportLegend() {
         onClick={() => ref.current?.showModal()}
       >
         <Asset src={reportAssets.info} />
-        진행 상황
+        {t('report.progress')}
       </button>
       <dialog
         ref={ref}
@@ -59,7 +60,7 @@ export function ReportLegend() {
         }}
       >
         <h2 id={id} className="text-center text-xl font-bold">
-          진행 상황
+          {t('report.progress')}
         </h2>
         <div className="report-legend my-3 !p-0">
           {reportSteps.map((status, i) => (
@@ -75,7 +76,7 @@ export function ReportLegend() {
             className="!min-h-10 !w-[132px] !py-2 !text-base"
             onClick={() => ref.current?.close()}
           >
-            닫기
+            {t('report.close')}
           </Button>
         </div>
       </dialog>
@@ -83,6 +84,8 @@ export function ReportLegend() {
   )
 }
 export function ReportProgress({ report }: { report: Report }) {
+  const { t } = useTranslation()
+  const label = useLabel()
   if (report.status === 'CANCELED')
     return (
       <Card className="p-4">
@@ -93,13 +96,13 @@ export function ReportProgress({ report }: { report: Report }) {
   const current = reportSteps.indexOf(report.status)
   return (
     <section className="flex flex-col gap-2">
-      <ReportHeading info>진행 상황</ReportHeading>
+      <ReportHeading info>{t('report.progress')}</ReportHeading>
       <Card className="report-progress">
-        <ol aria-label="신고 진행 상황">
+        <ol aria-label={t('report.progressList')}>
           {reportSteps.map((status, i) => (
             <li key={status} aria-current={i === current ? 'step' : undefined}>
               <span className={`report-step ${i <= current ? 'is-done' : ''}`}>{i + 1}</span>
-              <strong>{reportLabels[status]}</strong>
+              <strong>{label(reportLabels[status])}</strong>
               <time>
                 {times[i]
                   ? new Date(times[i]!).toLocaleTimeString('en-GB', {
@@ -166,11 +169,12 @@ export function AdminReportRows({ reports }: { reports: Report[] }) {
   )
 }
 export function ReportSummary({ report, children }: { report: Report; children?: ReactNode }) {
+  const label = useLabel()
   return (
     <section className="green-gradient rounded-xl p-3.5 text-white shadow-card">
       <div className="mb-2 flex items-center gap-2.5">
         {/* 처리 상태는 진행 단계 표시가 따로 보여주므로, 카드에는 신고 유형을 표시한다 */}
-        <span className="report-badge bg-white/50">{reportCategories[report.category]}</span>
+        <span className="report-badge bg-white/50">{label(reportCategories[report.category])}</span>
         <time className="text-xs">{reportDate(report.createdAt)}</time>
       </div>
       <h2 className="text-lg font-bold">{report.title}</h2>
@@ -183,14 +187,15 @@ export function ReportSummary({ report, children }: { report: Report; children?:
   )
 }
 export function ReportContent({ report }: { report: Report }) {
+  const { t } = useTranslation()
   return (
     <>
       <section className="flex flex-col gap-2">
-        <ReportHeading>발생 장소</ReportHeading>
+        <ReportHeading>{t('report.fieldPlace')}</ReportHeading>
         <Card className="report-value">{report.place}</Card>
       </section>
       <section className="flex flex-col gap-2">
-        <ReportHeading>신고 내용</ReportHeading>
+        <ReportHeading>{t('report.content')}</ReportHeading>
         <Card className="report-value min-h-[132px] whitespace-pre-wrap">{report.content}</Card>
       </section>
     </>
