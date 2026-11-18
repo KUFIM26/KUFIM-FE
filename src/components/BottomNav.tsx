@@ -7,6 +7,7 @@ import { figmaAssets as assets } from '../data/figma-assets'
 import { useAuth } from '../app/auth-context'
 import { useAction } from '../hooks/useResource'
 import { RequestState } from './RequestState'
+import { useTranslation } from 'react-i18next'
 
 const spring = { stiffness: 420, damping: 36, mass: 1 }
 
@@ -21,6 +22,7 @@ export function BottomNav({
   const navigate = useNavigate()
   const { pathname, key: locationKey } = useLocation()
   const menuAction = useAction()
+  const { t } = useTranslation()
   const [menuRequestLocation, setMenuRequestLocation] = useState(locationKey)
   const navRef = useRef<HTMLElement>(null)
   const wasVisible = useRef(false)
@@ -69,13 +71,13 @@ export function BottomNav({
   }, [pathname, visible, reduceMotion, account, x, width])
 
   const links = [
-    { to: '/', label: '홈', icon: assets['221:412'].home, iconWidth: 22 },
-    { to: '/map', label: '지도', icon: assets['221:412'].map, iconWidth: 24 },
-    { to: '/waiting', label: '웨이팅', icon: assets['221:412'].waiting, iconWidth: 24.205 },
+    { to: '/', label: t('nav.home'), icon: assets['221:412'].home, iconWidth: 22 },
+    { to: '/map', label: t('nav.map'), icon: assets['221:412'].map, iconWidth: 24 },
+    { to: '/waiting', label: t('nav.waiting'), icon: assets['221:412'].waiting, iconWidth: 24.205 },
     {
       to: account ? '/admin' : '/menu',
-      label: '전체보기',
-      accessibleLabel: '전체 보기',
+      label: t('nav.menu'),
+      accessibleLabel: t('nav.menuAccessible'),
       menu: true,
       icon: assets['221:412'].menu,
       iconWidth: 18.1645,
@@ -89,7 +91,7 @@ export function BottomNav({
           <RequestState error={menuAction.error} retry={() => void openMenu()} />
         </div>
       )}
-      <nav ref={navRef} aria-label="주 메뉴" className="bottom-nav">
+      <nav ref={navRef} aria-label={t('nav.label')} className="bottom-nav">
         <Glass
           className="bottom-nav-material"
           aria-hidden="true"

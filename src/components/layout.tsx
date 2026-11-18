@@ -9,21 +9,27 @@ import { BottomNav } from './BottomNav'
 import { BottomNavActionContext } from './bottom-nav-context'
 import { createPortal } from 'react-dom'
 import { RequestState } from './RequestState'
+import { useTranslation } from 'react-i18next'
+import { applyLanguage, languageFor } from '../i18n'
+import { LanguageToggle } from './LanguageToggle'
 
 export function RootLayout() {
   const { pathname } = useLocation()
   const [actionHost, setActionHost] = useState<HTMLDivElement | null>(null)
   const nav = useMatches().some((match) => (match.handle as { bottomNav?: boolean })?.bottomNav)
+  const { t } = useTranslation()
   useEffect(() => {
     window.scrollTo(0, 0)
   }, [pathname])
+  // 관리자 화면은 항상 한국어, 방문자 화면은 고른 언어로 맞춘다.
+  useEffect(() => applyLanguage(languageFor(pathname)), [pathname])
   return (
     <div className="app-shell">
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:bg-white focus:p-3"
       >
-        본문으로 건너뛰기
+        {t('common.skipToContent')}
       </a>
       <BottomNavActionContext.Provider value={actionHost}>
         <FestivalProvider
@@ -66,6 +72,7 @@ export function Header({
   const context = useContext(FestivalContext)
   const festival = context?.festival
   const unread = (context?.unreadNotifications ?? 0) > 0
+  const { t } = useTranslation()
   useEffect(() => {
     document.title = `${title} · KUFIM`
   }, [title])
@@ -79,12 +86,13 @@ export function Header({
         <div>
           <p className="text-xs font-bold">KUFIM</p>
           <h1 className="mt-0.5 text-lg font-bold max-[360px]:text-base">
-            {festival?.name || 'KUFIM 축제 안내'}
+            {festival?.name || t('header.fallbackTitle')}
           </h1>
         </div>
+        <LanguageToggle className="ml-auto" />
         <Link
           to="/notifications"
-          aria-label="알림함"
+          aria-label={t('header.notifications')}
           className="relative ml-2 flex size-9 shrink-0 items-center justify-center rounded-full bg-[#f3f3f3]"
           data-unread={unread || undefined}
         >
@@ -103,7 +111,7 @@ export function Header({
       {!plain && (
         <button
           type="button"
-          aria-label="뒤로 가기"
+          aria-label={t('common.back')}
           onClick={goBack}
           className="flex size-7 shrink-0 items-center justify-center rounded-full bg-[#f3f3f3]"
         >

@@ -1,6 +1,7 @@
 import { useFestival } from '../app/festival-context'
 import { festivalDays, performanceDays, seoulDate } from '../apis/adapters'
 import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { Asset, Card, EmptyState, Tabs } from './ui'
 import { figmaAssets as assets } from '../data/figma-assets'
 import { facilities } from '../data/models'
@@ -15,6 +16,7 @@ export function EmergencyBanner({
   notice?: Notice
   admin?: boolean
 }) {
+  const { t } = useTranslation()
   if (!notice) return null
   const to = admin
     ? `/admin/notices/${notice?.id || 'urgent'}/edit`
@@ -24,7 +26,7 @@ export function EmergencyBanner({
       <Asset src={assets['17:303'].imgVector2} />
       <Link to={to} className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <strong className="text-base">긴급 공지</strong>
+          <strong className="text-base">{t('home.urgentNotice')}</strong>
           <span className="text-xs font-medium">{notice?.date || '09.30. 18:32'}</span>
         </div>
         <p className="mt-1 text-xs font-bold">
@@ -32,11 +34,11 @@ export function EmergencyBanner({
         </p>
       </Link>
       {dismiss ? (
-        <button type="button" aria-label="긴급 공지 닫기" onClick={dismiss}>
+        <button type="button" aria-label={t('home.closeUrgent')} onClick={dismiss}>
           <Asset src={assets['17:303'].imgFrame1597881180} />
         </button>
       ) : (
-        <Link to={to} aria-label="긴급 공지 보기">
+        <Link to={to} aria-label={t('home.viewUrgent')}>
           <Asset src={assets['42:751'].imgFrame1597881180} />
         </Link>
       )}
@@ -73,7 +75,8 @@ export function Stats({ items }: { items: { label: string; value: string }[] }) 
   )
 }
 export function ScheduleList({ items, admin = false }: { items: Performance[]; admin?: boolean }) {
-  if (!items.length) return <EmptyState>이 날짜에 등록된 공연이 없어요.</EmptyState>
+  const { t } = useTranslation()
+  if (!items.length) return <EmptyState>{t('home.noShowsThisDay')}</EmptyState>
   return (
     <Card className="overflow-hidden">
       {items.map((item) => (
