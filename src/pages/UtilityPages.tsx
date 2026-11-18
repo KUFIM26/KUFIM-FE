@@ -5,16 +5,19 @@ import { Link } from 'react-router-dom'
 import { Page } from '../components/layout'
 import { BackToList, Card, SectionTitle } from '../components/ui'
 import { screens } from '../data/screens'
+import { useTranslation } from 'react-i18next'
+import i18n from '../i18n'
 
 export function NotFoundPage() {
+  const { t } = useTranslation()
   return (
-    <Page title="페이지를 찾을 수 없어요">
+    <Page title={t('misc.notFoundTitle')}>
       <div className="page-pad">
         <Card className="p-6 text-center">
           <p className="text-[48px] font-bold text-brand">404</p>
-          <p className="mt-3 text-sm">주소를 확인하거나 홈으로 돌아가주세요.</p>
+          <p className="mt-3 text-sm">{t('misc.notFoundBody')}</p>
         </Card>
-        <BackToList to="/">홈으로 가기</BackToList>
+        <BackToList to="/">{t('misc.goHome')}</BackToList>
       </div>
     </Page>
   )
@@ -22,10 +25,10 @@ export function NotFoundPage() {
 export function ErrorPage() {
   return (
     <div className="app-shell px-5 py-20 text-center">
-      <h1 className="text-xl font-bold">화면을 불러오지 못했어요.</h1>
-      <p className="mt-3 text-sm">잠시 후 다시 시도해주세요.</p>
+      <h1 className="text-xl font-bold">{i18n.t('misc.errorTitle')}</h1>
+      <p className="mt-3 text-sm">{i18n.t('misc.errorBody')}</p>
       <a href="/" className="primary-button green-gradient mt-6">
-        홈으로 돌아가기
+        {i18n.t('misc.backHome')}
       </a>
     </div>
   )
@@ -46,19 +49,22 @@ export function LoadingPage() {
   )
 }
 export function GuidePage({ report = false }: { report?: boolean }) {
+  const { t } = useTranslation()
   return (
-    <Page title={report ? '긴급 신고' : '이용 안내'} back="/menu">
+    <Page title={report ? '긴급 신고' : t('misc.guideTitle')} back="/menu">
       <div className="page-pad">
         <Card className="p-5">
-          <h2 className="text-lg font-bold">{report ? '신고 안내 준비 중' : 'KUFIM 이용 안내'}</h2>
+          <h2 className="text-lg font-bold">
+            {report ? '신고 안내 준비 중' : t('misc.guideHeading')}
+          </h2>
           <p className="mt-3 text-sm leading-relaxed">
             {report
               ? '운영진 연락처와 신고 기능은 준비 중입니다. 현재 화면에서는 신고가 접수되지 않습니다.'
-              : '축제 지도에서 부스를 찾고, 무대 일정과 공지사항을 확인하세요. 웨이팅은 부스 현장의 QR을 통해 접수할 수 있습니다.'}
+              : t('misc.guideBody')}
           </p>
         </Card>
         <BackToList to={report ? '/map' : '/menu'}>
-          {report ? '상황실 위치 확인하기' : '전체 메뉴로 돌아가기'}
+          {report ? '상황실 위치 확인하기' : t('misc.backToMenu')}
         </BackToList>
       </div>
     </Page>

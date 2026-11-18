@@ -56,11 +56,12 @@ export function Tabs({
   options: Option[]
   underline?: boolean
 }) {
+  const { t } = useTranslation()
   return (
     <div
       className={`flex ${underline ? 'gap-[30px] border-t border-[#e5e5e5] px-[11px]' : 'gap-2'}`}
       role="group"
-      aria-label="보기 선택"
+      aria-label={t('ui.viewSelect')}
     >
       {options.map((option) => (
         <button
@@ -86,17 +87,21 @@ export function Chips({
   value,
   onChange,
   compact = false,
+  format,
 }: {
   options: string[]
   value: string
   onChange: (value: string) => void
   compact?: boolean
+  /** 값은 그대로 두고 화면에 보이는 글자만 바꾼다(번역용). */
+  format?: (option: string) => string
 }) {
+  const { t } = useTranslation()
   return (
     <div
       className="hide-scrollbar flex min-w-0 gap-2 overflow-x-auto pb-0.5"
       role="group"
-      aria-label="카테고리 선택"
+      aria-label={t('ui.categorySelect')}
     >
       {options.map((option) => (
         <button
@@ -106,7 +111,7 @@ export function Chips({
           onClick={() => onChange(option)}
           className={`shrink-0 rounded-full font-semibold ${compact ? 'px-2 py-0.5 text-[10px]' : 'px-3 py-1 text-sm shadow-[1px_1px_1px_rgba(0,0,0,.1)]'} ${value === option ? 'bg-brand text-white' : 'bg-[#eee] text-[#383838]'}`}
         >
-          {option}
+          {format ? format(option) : option}
         </button>
       ))}
     </div>
@@ -120,16 +125,11 @@ export function EmptyState({ children }: { children?: ReactNode }) {
     </div>
   )
 }
-export function BackToList({
-  to,
-  children = '목록으로 돌아가기',
-}: {
-  to: string
-  children?: ReactNode
-}) {
+export function BackToList({ to, children }: { to: string; children?: ReactNode }) {
+  const { t } = useTranslation()
   return (
     <Link to={to} className="primary-button green-gradient">
-      {children}
+      {children ?? t('ui.backToList')}
     </Link>
   )
 }
@@ -139,8 +139,8 @@ export function ConfirmDialog({
   children,
   onClose,
   onConfirm,
-  confirmLabel = '취소하기',
-  cancelLabel = '유지하기',
+  confirmLabel,
+  cancelLabel,
   admin = false,
 }: {
   open: boolean
@@ -154,6 +154,7 @@ export function ConfirmDialog({
 }) {
   const ref = useRef<HTMLDialogElement>(null)
   const id = useId()
+  const { t } = useTranslation()
   useEffect(() => {
     if (open && !ref.current?.open) ref.current?.showModal()
     else if (!open) ref.current?.close()
@@ -178,14 +179,14 @@ export function ConfirmDialog({
           className={`!min-h-10 !w-[132px] !py-2 !text-base ${admin ? '!bg-[#ffa3a3] !text-[#3b0500]' : ''}`}
           onClick={onConfirm}
         >
-          {confirmLabel}
+          {confirmLabel ?? t('ui.cancelConfirm')}
         </Button>
         <Button
           tone={admin ? 'blue' : 'green'}
           className="!min-h-10 !w-[132px] !py-2 !text-base"
           onClick={onClose}
         >
-          {cancelLabel}
+          {cancelLabel ?? t('ui.keep')}
         </Button>
       </div>
     </dialog>

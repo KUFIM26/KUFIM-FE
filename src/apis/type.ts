@@ -89,7 +89,13 @@ export type NoticeDto = {
   publishedAt: string
   unread?: boolean | null
 }
-export type Floorplan = { imageUrl: string; width: number; height: number }
+export type Floorplan = {
+  imageUrl: string
+  /** 영어 지도. 서버가 아직 내려주지 않으면 프런트에 들어 있는 영어 지도로 대신한다. */
+  imageUrlEn?: string | null
+  width: number
+  height: number
+}
 export type MapPin = Pin & {
   pinId: number
   targetType: 'BOOTH' | 'FACILITY' | 'STAGE'
