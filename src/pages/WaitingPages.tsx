@@ -14,18 +14,21 @@ import { useAction, useResource } from '../hooks/useResource'
 import { boothView, dateText, waitingLabels } from '../apis/adapters'
 import type { Booth } from '../data/models'
 import type { WaitingTicket } from '../apis/type'
+import { useTranslation } from 'react-i18next'
+import { useLabel } from '../i18n/label'
 
 export function WaitingInstructions() {
+  const { t } = useTranslation()
   return (
     <Card className="p-4">
-      <h2 className="text-sm font-bold">이용 방법</h2>
+      <h2 className="text-sm font-bold">{t('waiting.howTo')}</h2>
       <ol className="mt-1.5 list-decimal pl-[18px] text-xs">
-        <li>지도에서 부스 위치 확인</li>
-        <li>부스 현장의 QR을 휴대폰 카메라로 스캔</li>
-        <li>정보 입력 후 대기표 확인</li>
-        <li>호출 후 10분 안에 입장해주세요.</li>
+        <li>{t('waiting.stepMap')}</li>
+        <li>{t('waiting.stepScanPhone')}</li>
+        <li>{t('waiting.stepTicket')}</li>
+        <li>{t('waiting.stepEnter')}</li>
       </ol>
-      <p className="mt-2 text-xs text-muted">호출 여부는 내 대기표와 알림함에서 확인해주세요.</p>
+      <p className="mt-2 text-xs text-muted">{t('waiting.checkCall')}</p>
     </Card>
   )
 }
@@ -46,8 +49,10 @@ export function WaitingPage() {
   useTopic(active ? `/topic/booth/${active.boothId}/waiting` : null, resource.refresh)
   const [cancelOpen, setCancelOpen] = useState(false)
   const action = useAction()
+  const { t } = useTranslation()
+  const label = useLabel()
   return (
-    <Page title="QR 웨이팅" nav>
+    <Page title={t('waiting.title')} nav>
       <div className="page-pad !gap-3">
         <RequestState
           loading={resource.loading}
@@ -58,24 +63,29 @@ export function WaitingPage() {
           <section className="flex flex-col gap-2">
             <SectionTitle>{active.boothName}</SectionTitle>
             <Card className="p-4">
-              <h2 className="font-bold">{waitingLabels[active.status]}</h2>
+              <h2 className="font-bold">{label(waitingLabels[active.status])}</h2>
               {active.status === 'WAITING' ? (
                 <>
                   <p className="mt-1.5 text-[32px] font-bold text-[#0b5225]">
-                    {active.position}번째
+                    {t('waiting.position', { n: active.position })}
                   </p>
-                  <p className="text-xs">예상 대기 {active.estimatedWaitMinutes}분</p>
+                  <p className="text-xs">{t('waiting.eta', { n: active.estimatedWaitMinutes })}</p>
                 </>
               ) : (
                 <p className="mt-2 text-sm text-danger">
-                  호출되었습니다. {active.autoCancelAt && dateText(active.autoCancelAt)}까지
-                  입장해주세요.
+                  {active.autoCancelAt
+                    ? t('waiting.calledUntil', { time: dateText(active.autoCancelAt) })
+                    : t('waiting.called')}
                 </p>
               )}
               <p className="mt-2 text-sm">
-                웨이팅 번호 <strong>{active.waitingNumber}번</strong> · {active.partySize}명
+                {t('waiting.number')}{' '}
+                <strong>{t('waiting.numberValue', { n: active.waitingNumber })}</strong> ·{' '}
+                {t('waiting.party', { n: active.partySize })}
               </p>
-              <p className="mt-1 text-xs">{dateText(active.registeredAt)} 등록</p>
+              <p className="mt-1 text-xs">
+                {t('waiting.registered', { time: dateText(active.registeredAt) })}
+              </p>
             </Card>
           </section>
         ) : (
@@ -87,11 +97,11 @@ export function WaitingPage() {
             >
               <Asset src="/assets/figma/waiting-empty/alarm.svg" />
               <div className="flex w-full flex-col gap-2 text-center">
-                <h2 className="text-lg font-bold">아직 신청한 웨이팅이 없어요.</h2>
+                <h2 className="text-lg font-bold">{t('waiting.noneTitle')}</h2>
                 <p className="text-xs font-normal">
-                  부스에 직접 방문해 현장 QR을 스캔하면
+                  {t('waiting.noneLine1')}
                   <br />
-                  웨이팅을 등록할 수 있어요.
+                  {t('waiting.noneLine2')}
                 </p>
               </div>
             </section>
@@ -101,33 +111,33 @@ export function WaitingPage() {
           <WaitingInstructions />
         ) : (
           <Card className="p-4">
-            <h2 className="text-sm font-bold">이용 방법</h2>
+            <h2 className="text-sm font-bold">{t('waiting.howTo')}</h2>
             <div className="mt-1.5 text-xs font-medium">
               <ol className="list-decimal pl-[18px]">
-                <li>지도에서 원하는 부스 위치 확인</li>
-                <li>해당 부스로 직접 이동</li>
-                <li>부스의 QR코드 스캔</li>
-                <li>입장 순서가 되면 알림/문자 수신하여 입장</li>
+                <li>{t('waiting.stepFind')}</li>
+                <li>{t('waiting.stepGo')}</li>
+                <li>{t('waiting.stepScan')}</li>
+                <li>{t('waiting.stepNotify')}</li>
               </ol>
-              <p className="pl-[18px]">(호출 후 10분 안에 입장하지 않을 경우 자동 취소)</p>
+              <p className="pl-[18px]">{t('waiting.autoCancel')}</p>
             </div>
           </Card>
         )}
         <RequestState error={action.error} />
         {active ? (
           <Button tone="red" disabled={action.pending} onClick={() => setCancelOpen(true)}>
-            웨이팅 취소하기
+            {t('waiting.cancel')}
           </Button>
         ) : (
           <Link className="primary-button green-gradient" to="/waiting/scan">
             <Asset src="/assets/figma/waiting-empty/qr.svg" />
-            부스 QR 스캔하기
+            {t('waiting.scan')}
           </Link>
         )}
         <section className="flex flex-col gap-2">
           <h2 className="flex items-center gap-1.5 text-base font-bold">
             <Asset src="/assets/figma/waiting-empty/title.svg" />
-            현재 가장 인기있는 부스 TOP3
+            {t('waiting.top3')}
           </h2>
           <RequestState error={popular.error} retry={() => void popular.refresh()} />
           {popular.data?.map((booth) => (
@@ -139,7 +149,7 @@ export function WaitingPage() {
       </div>
       <ConfirmDialog
         open={cancelOpen}
-        title="웨이팅 취소하기"
+        title={t('waiting.cancel')}
         onClose={() => setCancelOpen(false)}
         onConfirm={() => {
           if (active)
@@ -150,7 +160,7 @@ export function WaitingPage() {
             })
         }}
       >
-        정말 {active?.boothName}의 웨이팅을 취소하시겠습니까?
+        {t('waiting.cancelAsk', { booth: active?.boothName })}
         {action.error && (
           <span role="alert" className="block text-danger">
             {action.error}
@@ -171,9 +181,10 @@ export function QrEntryPage() {
     [boothCode],
   )
   const resource = useResource(loader)
+  const { t } = useTranslation()
   if (resource.data) return <Navigate to={`/waiting/register/${resource.data.boothId}`} replace />
   return (
-    <Page title="QR 웨이팅" back="/waiting">
+    <Page title={t('waiting.title')} back="/waiting">
       <RequestState
         loading={resource.loading}
         error={resource.error}
@@ -203,9 +214,10 @@ export function WaitingRegisterPage() {
   const connected = useRealtimeConnected()
   const resource = useResource(loader, pollEvery(connected, 15000))
   useTopic(`/topic/booth/${boothId}/waiting`, resource.refresh)
+  const { t } = useTranslation()
   if (!resource.data)
     return (
-      <Page title="QR 웨이팅" back="/waiting">
+      <Page title={t('waiting.title')} back="/waiting">
         <RequestState
           loading={resource.loading}
           error={resource.error}
@@ -217,6 +229,7 @@ export function WaitingRegisterPage() {
 }
 function RegistrationForm({ booth, ticket }: { booth: Booth; ticket: WaitingTicket | null }) {
   const action = useAction()
+  const { t } = useTranslation()
   const retry = useRef({ body: '', key: '' })
   const navigate = useNavigate()
   const sheetRef = useRef<HTMLElement>(null)
@@ -294,12 +307,12 @@ function RegistrationForm({ booth, ticket }: { booth: Booth; ticket: WaitingTick
     })
   }
   return (
-    <Page title="QR 웨이팅" back="/waiting/scan" className="!bg-black">
+    <Page title={t('waiting.title')} back="/waiting/scan" className="!bg-black">
       <ScannerBackground />
       <section
         ref={sheetRef}
         className="registration-sheet fixed bottom-0 left-1/2 z-40 flex w-full max-w-[393px] -translate-x-1/2 flex-col overflow-hidden rounded-t-xl bg-canvas pt-2 shadow-[0_-2px_2px_rgba(0,0,0,.2)]"
-        aria-label="웨이팅 접수"
+        aria-label={t('waiting.sheet')}
       >
         <div className="mx-auto mb-4 h-[3px] w-[51px] shrink-0 rounded bg-[#c2c2c2]" />
         <div
@@ -316,7 +329,7 @@ function RegistrationForm({ booth, ticket }: { booth: Booth; ticket: WaitingTick
             <WaitingNumbers booth={booth} />
           </div>
           <Card className="mt-3 !bg-[#f9f9f9] p-4">
-            <h2 className="text-sm font-bold">부스 소개</h2>
+            <h2 className="text-sm font-bold">{t('waiting.aboutBooth')}</h2>
             <p className="mt-1.5 text-xs">{booth.description}</p>
           </Card>
           <form
@@ -328,7 +341,7 @@ function RegistrationForm({ booth, ticket }: { booth: Booth; ticket: WaitingTick
             <label className="form-field">
               <span className="flex items-center gap-1.5 text-base font-bold">
                 <Asset src={assets['75:550'].imgVector1} />
-                학번
+                {t('waiting.studentId')}
               </span>
               <input
                 required
@@ -339,14 +352,14 @@ function RegistrationForm({ booth, ticket }: { booth: Booth; ticket: WaitingTick
                 value={student}
                 onChange={(e) => setStudent(e.target.value.replace(/\D/g, ''))}
                 className="form-control"
-                placeholder="학번을 입력하세요(9자리)"
-                title="학번 9자리를 입력해주세요."
+                placeholder={t('waiting.studentIdPlaceholder')}
+                title={t('waiting.studentIdHint')}
               />
             </label>
             <label className="form-field">
               <span className="flex items-center gap-1.5 text-base font-bold">
                 <Asset src={assets['75:550'].imgVector1} />
-                전화번호
+                {t('waiting.phone')}
               </span>
               <input
                 required
@@ -357,14 +370,14 @@ function RegistrationForm({ booth, ticket }: { booth: Booth; ticket: WaitingTick
                 value={phone}
                 onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
                 className="form-control"
-                placeholder="전화번호를 입력하세요(11자리)"
-                title="숫자만 11자리 입력해주세요."
+                placeholder={t('waiting.phonePlaceholder')}
+                title={t('waiting.phoneHint')}
               />
             </label>
             <label className="form-field">
               <span className="flex items-center gap-1.5 text-base font-bold">
                 <Asset src={assets['75:550'].imgVector1} />
-                인원 수
+                {t('waiting.partySize')}
               </span>
               <span className="relative">
                 <select
@@ -374,11 +387,11 @@ function RegistrationForm({ booth, ticket }: { booth: Booth; ticket: WaitingTick
                   className={`form-control h-10 appearance-none py-0 pr-10 ${people ? 'text-black' : 'text-[#8b8b8b]'}`}
                 >
                   <option value="" disabled>
-                    인원 수를 선택하세요
+                    {t('waiting.partyPlaceholder')}
                   </option>
                   {[1, 2, 3, 4, 5, 6].map((count) => (
                     <option key={count} value={count}>
-                      {count}명
+                      {t('waiting.party', { n: count })}
                     </option>
                   ))}
                 </select>
@@ -391,7 +404,7 @@ function RegistrationForm({ booth, ticket }: { booth: Booth; ticket: WaitingTick
             <div className="form-field">
               <span className="flex items-center gap-1.5 text-base font-bold">
                 <Asset src={assets['75:550'].imgVector1} />
-                개인정보 활용 동의
+                {t('waiting.privacy')}
               </span>
               <button
                 type="button"
@@ -400,7 +413,7 @@ function RegistrationForm({ booth, ticket }: { booth: Booth; ticket: WaitingTick
                 onClick={() => setPrivacyOpen((open) => !open)}
                 className="form-control flex h-10 items-center justify-between py-0 text-left text-[#8b8b8b]"
               >
-                자세히 보기
+                {t('waiting.privacyMore')}
                 <Asset
                   src={assets['75:550'].imgChevronDown}
                   className={`transition-transform ${privacyOpen ? 'rotate-180' : ''}`}
@@ -411,8 +424,7 @@ function RegistrationForm({ booth, ticket }: { booth: Booth; ticket: WaitingTick
                   id="privacy-details"
                   className="rounded-lg bg-[#f0f2f0] px-3 py-2 text-xs text-muted"
                 >
-                  웨이팅 등록과 호출 안내를 위해 학번, 전화번호 및 인원 수를 수집·이용합니다. 동의를
-                  거부할 수 있으나 웨이팅 접수가 제한됩니다.
+                  {t('waiting.privacyBody')}
                 </p>
               )}
               <label className="relative ml-auto flex w-fit cursor-pointer items-center gap-2 text-sm font-medium text-[#8b8b8b]">
@@ -427,18 +439,18 @@ function RegistrationForm({ booth, ticket }: { booth: Booth; ticket: WaitingTick
                   src={assets['75:550'].imgConsentCheck}
                   className="pointer-events-none opacity-60 transition-[filter,opacity] peer-checked:opacity-100 peer-checked:[filter:brightness(.65)_sepia(1)_saturate(7)_hue-rotate(95deg)]"
                 />
-                동의합니다
+                {t('waiting.agree')}
               </label>
             </div>
             {ticket && (
               <p role="status" className="text-sm text-danger">
-                이미 대기 중인 부스가 있어요. 내 대기표를 확인해주세요.
+                {t('waiting.already')}
               </p>
             )}
             <RequestState error={action.error} />
             {!ticket && booth.waitingStatus !== 'OPEN' && (
               <p role="status" className="text-sm text-danger">
-                현재 접수하지 않는 부스입니다.
+                {t('waiting.closed')}
               </p>
             )}
           </form>
@@ -453,7 +465,7 @@ function RegistrationForm({ booth, ticket }: { booth: Booth; ticket: WaitingTick
             formNoValidate={!!ticket}
             disabled={action.pending || (!ticket && booth.waitingStatus !== 'OPEN')}
           >
-            {ticket ? '내 대기표 보기' : '웨이팅 접수하기'}
+            {ticket ? t('waiting.myTicket') : t('waiting.submit')}
           </Button>
         </div>
       </section>

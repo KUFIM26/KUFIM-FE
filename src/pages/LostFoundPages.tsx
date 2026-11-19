@@ -10,6 +10,8 @@ import type { LostItemCategory } from '../apis/lostItem'
 import { isNotFound } from '../apis/axios'
 import { controlRoomTel, reportAssets, reportDate } from '../data/report-design'
 import { useResource } from '../hooks/useResource'
+import { useTranslation } from 'react-i18next'
+import { useLabel } from '../i18n/label'
 
 const ALL = '전체'
 const categoryOf = (label: string) =>
@@ -23,6 +25,8 @@ export function LostFoundPage() {
   const [q, setQ] = useState('')
   const [storedOnly, setStoredOnly] = useState(true)
   const [page, setPage] = useState(0)
+  const { t } = useTranslation()
+  const label = useLabel()
   // 입력이 멈춘 뒤에만 검색한다. 서버는 2자 이상만 받는다.
   useEffect(() => {
     const next = text.trim().length >= 2 ? text.trim() : ''
@@ -41,7 +45,7 @@ export function LostFoundPage() {
   const data = resource.data
   return (
     <Page
-      title="분실물센터"
+      title={t('lost.title')}
       back="/menu"
       backIcon={reportAssets.back}
       className="report-page lost-page"
@@ -49,22 +53,23 @@ export function LostFoundPage() {
       <div className="page-pad !gap-3">
         <Card className="lost-guide">
           <p className="text-[13px] leading-normal font-semibold">
-            습득물은 상황실에서 보관합니다.
+            {t('lost.guide1')}
             <br />
-            본인 확인 후 찾아가실 수 있어요.
+            {t('lost.guide2')}
           </p>
           <dl>
-            <dt>보관 장소</dt>
-            <dd>상황실</dd>
-            <dt>운영 시간</dt>
-            <dd>축제 운영 시간과 동일</dd>
-            <dt>축제 종료 후</dt>
-            <dd>남은 물건은 총학생회로 이관</dd>
+            <dt>{t('lost.storage')}</dt>
+            <dd>{t('lost.controlRoom')}</dd>
+            <dt>{t('lost.hours')}</dt>
+            <dd>{t('lost.sameAsFestival')}</dd>
+            <dt>{t('lost.afterFestival')}</dt>
+            <dd>{t('lost.handover')}</dd>
           </dl>
         </Card>
         <Chips
           options={[ALL, ...Object.values(lostItemCategories)]}
           value={category ? lostItemCategories[category] : ALL}
+          format={label}
           onChange={(label) => {
             setCategory(categoryOf(label))
             setPage(0)
@@ -73,16 +78,16 @@ export function LostFoundPage() {
         <input
           type="search"
           className="form-control report-control"
-          aria-label="습득물 검색"
-          placeholder="물건 이름, 장소로 검색"
+          aria-label={t('lost.search')}
+          placeholder={t('lost.searchPh')}
           maxLength={30}
           value={text}
           onChange={(e) => setText(e.target.value)}
         />
         <div className="flex items-center justify-between text-xs font-semibold text-[#6b6b6b]">
-          <span>{data ? `습득물 ${data.totalElements}건` : ''}</span>
+          <span>{data ? t('lost.count', { n: data.totalElements }) : ''}</span>
           <label className="flex cursor-pointer items-center gap-2">
-            보관 중만 보기
+            {t('lost.storedOnly')}
             <input
               type="checkbox"
               className="sr-only"
@@ -105,29 +110,27 @@ export function LostFoundPage() {
             <LostItemGrid items={data.content} />
           ) : (
             <EmptyState>
-              <b className="block text-sm text-[#1a1a1a]">조건에 맞는 습득물이 없어요</b>
-              <span className="mt-1.5 block text-xs">
-                찾는 물건이 없다면 분실 신고를 남겨주세요.
-              </span>
+              <b className="block text-sm text-[#1a1a1a]">{t('lost.emptyTitle')}</b>
+              <span className="mt-1.5 block text-xs">{t('lost.emptyBody')}</span>
             </EmptyState>
           ))}
         {data && data.totalPages > 1 && (
           <div className="flex items-center justify-between">
             <Button disabled={!page} onClick={() => setPage((p) => p - 1)}>
-              이전
+              {t('ui.prev')}
             </Button>
             <span className="shrink-0 px-3">
               {page + 1}/{data.totalPages}
             </span>
             <Button disabled={page + 1 >= data.totalPages} onClick={() => setPage((p) => p + 1)}>
-              다음
+              {t('ui.next')}
             </Button>
           </div>
         )}
       </div>
       <BottomActions>
         <Link className="primary-button green-gradient" to="/report/new?category=LOST_ITEM">
-          분실 신고하기
+          {t('lost.reportLost')}
         </Link>
       </BottomActions>
     </Page>
@@ -146,10 +149,11 @@ export function LostFoundDetailPage() {
     [id],
   )
   const resource = useResource(loader)
+  const { t } = useTranslation()
   const item = resource.data
   return (
     <Page
-      title="습득물 상세"
+      title={t('lost.detail')}
       back="/lost-found"
       backIcon={reportAssets.back}
       className="report-page lost-page"
@@ -163,10 +167,8 @@ export function LostFoundDetailPage() {
         {item === null && (
           <>
             <EmptyState>
-              <b className="block text-sm text-[#1a1a1a]">찾을 수 없는 습득물이에요</b>
-              <span className="mt-1.5 block text-xs">
-                이미 주인에게 돌아갔거나 삭제된 물건입니다.
-              </span>
+              <b className="block text-sm text-[#1a1a1a]">{t('lost.missingTitle')}</b>
+              <span className="mt-1.5 block text-xs">{t('lost.missingBody')}</span>
             </EmptyState>
             <BackToList to="/lost-found" />
           </>
@@ -176,16 +178,16 @@ export function LostFoundDetailPage() {
             {/* 사진이 비공개이거나 없으면 자리 자체를 두지 않는다 */}
             {item.imageUrl && (
               <div className="lost-photo">
-                <img src={item.imageUrl} alt={`${item.name} 사진`} />
+                <img src={item.imageUrl} alt={t('lost.photoOf', { name: item.name })} />
               </div>
             )}
-            <LostItemSummary item={item}>보관 중　|　상황실에서 찾아가실 수 있어요</LostItemSummary>
+            <LostItemSummary item={item}>{t('lost.storedNote')}</LostItemSummary>
             {(
               [
-                ['습득 장소', item.foundPlace],
-                ['습득 일시', item.foundAt && reportDate(item.foundAt)],
-                ['보관 장소', item.storagePlace],
-                ['특징', item.description],
+                [t('lost.foundPlace'), item.foundPlace],
+                [t('lost.foundAt'), item.foundAt && reportDate(item.foundAt)],
+                [t('lost.storage'), item.storagePlace],
+                [t('lost.description'), item.description],
               ] as const
             ).map(
               ([label, value]) =>
@@ -197,12 +199,12 @@ export function LostFoundDetailPage() {
                 ),
             )}
             <section className="report-field mt-2">
-              <ReportHeading>찾으러 오실 때</ReportHeading>
+              <ReportHeading>{t('lost.pickup')}</ReportHeading>
               <Card className="lost-guide">
                 <ol>
-                  <li>학생증 또는 신분증 지참</li>
-                  <li>물건의 특징을 설명해 주세요</li>
-                  <li>축제 운영 시간 안에 상황실 방문</li>
+                  <li>{t('lost.pickup1')}</li>
+                  <li>{t('lost.pickup2')}</li>
+                  <li>{t('lost.pickup3')}</li>
                 </ol>
               </Card>
             </section>
@@ -213,13 +215,13 @@ export function LostFoundDetailPage() {
         <BottomActions>
           <div className="flex gap-2">
             <Link className="primary-button green-gradient !text-base" to="/map?facility=상황실">
-              상황실 위치 보기
+              {t('report.location')}
             </Link>
             <a
               className="primary-button border border-brand bg-white !text-base !text-brand"
               href={controlRoomTel}
             >
-              상황실 전화하기
+              {t('report.call')}
             </a>
           </div>
         </BottomActions>

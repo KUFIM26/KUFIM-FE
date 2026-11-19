@@ -11,9 +11,13 @@ import { BottomActions, Page } from '../components/layout'
 import { BoothRow, FacilityFilters, MapImage, WaitingNumbers } from '../components/festival'
 import { Card, Chips, EmptyState, Tabs } from '../components/ui'
 import { boothCategories } from '../data/models'
+import { useTranslation } from 'react-i18next'
+import { useLabel } from '../i18n/label'
 
 export function BoothsPage({ admin = false }: { admin?: boolean }) {
   const { booths } = useFestival()
+  const { t } = useTranslation()
+  const label = useLabel()
   const [params, setParams] = useSearchParams()
   const period = ['night', 'facility'].includes(params.get('period') || '')
     ? params.get('period')!
@@ -27,7 +31,7 @@ export function BoothsPage({ admin = false }: { admin?: boolean }) {
   )
   return (
     <Page
-      title={admin ? '부스 프로그램 관리' : '부스 프로그램 목록'}
+      title={admin ? '부스 프로그램 관리' : t('booths.title')}
       back={admin ? '/admin' : '/menu'}
       className={admin ? 'pb-28' : ''}
     >
@@ -36,9 +40,9 @@ export function BoothsPage({ admin = false }: { admin?: boolean }) {
           value={period}
           onChange={updatePeriod}
           options={[
-            { value: 'day', label: '주간' },
-            { value: 'night', label: '야간' },
-            { value: 'facility', label: '시설' },
+            { value: 'day', label: t('booths.day') },
+            { value: 'night', label: t('booths.night') },
+            { value: 'facility', label: t('booths.facility') },
           ]}
         />
       </div>
@@ -46,18 +50,27 @@ export function BoothsPage({ admin = false }: { admin?: boolean }) {
         <FacilityFilters value={category} onChange={updateCategory} />
       ) : (
         <div className="px-5 py-3.5">
-          <Chips options={boothCategories} value={category} onChange={updateCategory} />
+          <Chips
+            options={boothCategories}
+            value={category}
+            onChange={updateCategory}
+            format={label}
+          />
         </div>
       )}
       <section className="min-h-[calc(100dvh-178px)] rounded-t-xl border-t-2 border-[#d9d9d9] bg-white px-5 pt-4">
         <h2 className="text-base font-bold text-muted">
-          총 {items.length}개{period !== 'facility' && ' 부스'}
+          {t(period === 'facility' ? 'booths.totalFacilities' : 'booths.totalBooths', {
+            n: items.length,
+          })}
         </h2>
         <div className="mt-1 divide-y divide-[#d9d9d9]">
           {items.length ? (
             items.map((booth) => <BoothRow key={booth.id} booth={booth} admin={admin} />)
           ) : (
-            <EmptyState>해당하는 {period === 'facility' ? '시설이' : '부스가'} 없어요.</EmptyState>
+            <EmptyState>
+              {t(period === 'facility' ? 'booths.noFacilities' : 'booths.noBooths')}
+            </EmptyState>
           )}
         </div>
       </section>
@@ -94,10 +107,11 @@ export function BoothDetailPage() {
   const facility = id?.startsWith('facility-')
   const resource = useResource(loader, facility ? 0 : pollEvery(connected, 15000))
   useTopic(id && !facility ? `/topic/booth/${id}/waiting` : null, resource.refresh)
+  const { t } = useTranslation()
   const booth = resource.data
   if (!booth)
     return (
-      <Page title="부스 안내" back="/booths">
+      <Page title={t('booths.boothGuide')} back="/booths">
         <RequestState
           loading={resource.loading}
           error={resource.error}
@@ -106,7 +120,10 @@ export function BoothDetailPage() {
       </Page>
     )
   return (
-    <Page title={booth.period === 'facility' ? '시설 안내' : '부스 안내'} back="/booths">
+    <Page
+      title={t(booth.period === 'facility' ? 'booths.facilityGuide' : 'booths.boothGuide')}
+      back="/booths"
+    >
       <div className="page-pad">
         <div className="flex items-center gap-2">
           <div className="flex-1">
@@ -118,19 +135,19 @@ export function BoothDetailPage() {
           <WaitingNumbers booth={booth} />
         </div>
         <Card className="p-4">
-          <h2 className="font-bold">{booth.period === 'facility' ? '시설' : '부스'} 소개</h2>
+          <h2 className="font-bold">
+            {t(booth.period === 'facility' ? 'booths.aboutFacility' : 'booths.aboutBooth')}
+          </h2>
           <p className="mt-2 text-xs">{booth.description}</p>
         </Card>
-        <Link to="/map" aria-label="축제 지도에서 위치 보기" className="block">
+        <Link to="/map" aria-label={t('booths.viewOnMap')} className="block">
           <MapImage variant="mini" className="h-[260px] rounded-xl" focus={booth.position} />
         </Link>
         {booth.waitingEnabled && (
           <>
-            <p className="text-center text-sm text-muted">
-              부스에 직접 방문해 현장 QR을 스캔해주세요.
-            </p>
+            <p className="text-center text-sm text-muted">{t('booths.visitToScan')}</p>
             <Link to="/waiting/scan" className="primary-button green-gradient">
-              부스 QR 스캔하기
+              {t('booths.scan')}
             </Link>
           </>
         )}

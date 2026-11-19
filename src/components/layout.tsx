@@ -190,9 +190,10 @@ export function NotificationsLayout({
   readAllDisabled: boolean
   onReadAll?: () => void
 }) {
+  const { t } = useTranslation()
   return (
     <Page
-      title="알림함"
+      title={t('notifications.title')}
       back="/"
       className="notifications-page"
       action={
@@ -201,7 +202,7 @@ export function NotificationsLayout({
           className="text-xs font-bold text-brand underline disabled:opacity-50"
           onClick={onReadAll}
         >
-          전체 읽음
+          {t('notifications.readAll')}
         </button>
       }
     >

@@ -13,6 +13,8 @@ import { figmaAssets as assets } from '../data/figma-assets'
 import { noticeCategories } from '../data/models'
 import type { Notice } from '../data/models'
 import { NotFoundPage } from './UtilityPages'
+import { useTranslation } from 'react-i18next'
+import { useLabel } from '../i18n/label'
 
 function NoticeRows({
   items,
@@ -29,6 +31,7 @@ function NoticeRows({
   onRead?: (id: string) => void
   children?: ReactNode
 }) {
+  const label = useLabel()
   return (
     <Card className="overflow-hidden">
       {items.map((item) => (
@@ -52,7 +55,7 @@ function NoticeRows({
             <h2 className="text-sm font-bold">{item.title}</h2>
             <p className="mt-1 flex items-center gap-2 text-[10px] font-medium">
               {item.date}
-              <span className="rounded-full bg-[#eee] px-1 text-[6px]">{item.category}</span>
+              <span className="rounded-full bg-[#eee] px-1 text-[6px]">{label(item.category)}</span>
             </p>
           </div>
           <Asset src={assets['42:751'].imgFrame1597881181} />
@@ -66,13 +69,15 @@ export function NoticesPage({ admin = false }: { admin?: boolean }) {
   const { notices } = useFestival()
   const [params, setParams] = useSearchParams()
   const category = params.get('category') || '전체'
+  const { t } = useTranslation()
+  const label = useLabel()
   const urgent = notices.find((n) => n.category === '긴급')
   const rows = notices.filter(
     (n) => n.id !== urgent?.id && (category === '전체' || n.category === category),
   )
   return (
     <Page
-      title={admin ? '공지사항 등록' : '전체 공지사항'}
+      title={admin ? '공지사항 등록' : t('notices.title')}
       back={admin ? '/admin' : '/'}
       className={admin ? 'pb-28' : ''}
     >
@@ -82,11 +87,12 @@ export function NoticesPage({ admin = false }: { admin?: boolean }) {
           options={noticeCategories}
           value={category}
           onChange={(v) => setParams({ category: v }, { replace: true })}
+          format={label}
         />
         {rows.length ? (
           <NoticeRows items={rows} admin={admin} />
         ) : (
-          <EmptyState>해당 분류의 공지가 없어요.</EmptyState>
+          <EmptyState>{t('notices.empty')}</EmptyState>
         )}
       </div>
       {admin && (
@@ -102,16 +108,20 @@ export function NoticesPage({ admin = false }: { admin?: boolean }) {
 export function NoticeDetailPage() {
   const { id } = useParams()
   const { notices } = useFestival()
+  const { t } = useTranslation()
+  const label = useLabel()
   const item = notices.find((n) => n.id === id)
   if (!item) return <NotFoundPage />
   return (
-    <Page title="공지사항" back="/notices">
+    <Page title={t('notices.detail')} back="/notices">
       <div className="page-pad !gap-3 !pt-[22px]">
         <section
           className={`${item.category === '긴급' ? 'red-gradient' : 'green-gradient'} rounded-xl p-3.5 text-white shadow-card`}
         >
           <p className="flex items-center gap-2 text-xs">
-            <span className="rounded-full bg-white/45 px-2 py-px font-bold">{item.category}</span>
+            <span className="rounded-full bg-white/45 px-2 py-px font-bold">
+              {label(item.category)}
+            </span>
             {item.date}
           </p>
           <h2 className="mt-2 text-lg font-bold">{item.title}</h2>
@@ -140,6 +150,8 @@ export function NotificationsPage() {
   const action = useAction()
   const { notices, refresh } = useFestival()
   const navigate = useNavigate()
+  const { t } = useTranslation()
+  const label = useLabel()
   return (
     <NotificationsLayout
       readAllDisabled={action.pending || !resource.data?.unreadCount}
@@ -160,12 +172,12 @@ export function NotificationsPage() {
         <RequestState error={action.error} />
         {resource.data && (
           <p role="status" aria-live="polite" className="sr-only">
-            읽지 않은 알림 {resource.data.unreadCount}개
+            {t('notifications.unreadCount', { n: resource.data.unreadCount })}
           </p>
         )}
         {!!resource.data?.content.length && (
           <Card className="overflow-hidden">
-            <ul aria-label="알림 목록">
+            <ul aria-label={t('notifications.list')}>
               {resource.data.content.map((item) => {
                 const unread = !item.readAt
                 const to = item.reportId
@@ -208,7 +220,7 @@ export function NotificationsPage() {
                       />
                       {unread && (
                         <span
-                          aria-label="읽지 않음"
+                          aria-label={t('notifications.unread')}
                           className="flex size-[19px] shrink-0 items-center justify-center rounded-full bg-brand text-[11.875px] font-bold text-white"
                         >
                           N
@@ -220,7 +232,7 @@ export function NotificationsPage() {
                           <time dateTime={item.createdAt}>{notificationDate(item.createdAt)}</time>
                           {unread && category && (
                             <span className="flex h-[12.262px] items-center rounded-full bg-[#eee] px-[4.598px] text-[7.664px] font-semibold text-[#383838]">
-                              {category}
+                              {label(category)}
                             </span>
                           )}
                         </div>
@@ -233,11 +245,11 @@ export function NotificationsPage() {
             </ul>
           </Card>
         )}
-        {resource.data?.content.length === 0 && <EmptyState>알림이 없습니다.</EmptyState>}
+        {resource.data?.content.length === 0 && <EmptyState>{t('notifications.empty')}</EmptyState>}
         {resource.data && resource.data.totalPages > 1 && (
           <div className="flex justify-between text-sm">
             <button disabled={page === 0 || action.pending} onClick={() => setPage((p) => p - 1)}>
-              이전
+              {t('ui.prev')}
             </button>
             <span>
               {page + 1} / {resource.data.totalPages}
@@ -246,7 +258,7 @@ export function NotificationsPage() {
               disabled={page + 1 >= resource.data.totalPages || action.pending}
               onClick={() => setPage((p) => p + 1)}
             >
-              다음
+              {t('ui.next')}
             </button>
           </div>
         )}

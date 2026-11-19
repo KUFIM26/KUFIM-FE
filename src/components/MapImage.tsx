@@ -5,6 +5,7 @@ import { useFestival } from '../app/festival-context'
 import type { Floorplan } from '../apis/type'
 import type { Booth } from '../data/models'
 import { useImageSize } from '../hooks/useImageSize'
+import { useTranslation } from 'react-i18next'
 
 type Point = { x: number; y: number }
 type View = Point & { scale: number }
@@ -22,7 +23,17 @@ const distance = (a: Point, b: Point) => Math.hypot(a.x - b.x, a.y - b.y)
 const midpoint = (a: Point, b: Point) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 })
 
 export function MapImage({ className = '', variant = 'map', ...props }: Props) {
-  const { floorplan: stored } = useFestival()
+  const { floorplan: korean } = useFestival()
+  const { t, i18n } = useTranslation()
+  // 영어 화면에서는 영어 지도를 쓴다. 한국어 지도와 크기·배치가 같아 핀 좌표는 그대로다.
+  // 서버가 영어 주소를 주지 않는 동안에는 기본 지도(map.svg)만 프런트의 영어 지도로 바꾼다.
+  const english =
+    korean?.imageUrlEn ||
+    (korean?.imageUrl.endsWith('/assets/map.svg')
+      ? korean.imageUrl.replace(/map\.svg$/, 'map_eng.svg')
+      : undefined)
+  const stored =
+    korean && i18n.language === 'en' && english ? { ...korean, imageUrl: english } : korean
   // Lay the map out by the image file itself, so a replaced image never gets
   // stretched to stale width/height values saved with the floorplan.
   const size = useImageSize(stored?.imageUrl, stored)
@@ -31,7 +42,7 @@ export function MapImage({ className = '', variant = 'map', ...props }: Props) {
       <div
         className={`flex items-center justify-center bg-[#e8eee9] p-5 text-sm text-muted ${className}`}
       >
-        등록된 지도가 없습니다.
+        {t('map.none')}
       </div>
     )
   if (!size)
@@ -40,7 +51,7 @@ export function MapImage({ className = '', variant = 'map', ...props }: Props) {
         className={`flex items-center justify-center bg-[#f4f7f1] p-5 text-sm text-muted ${className}`}
         data-map-variant={variant}
       >
-        지도를 불러오는 중입니다.
+        {t('map.loading')}
       </div>
     )
   const floorplan = { ...stored, width: size.width, height: size.height }
@@ -69,13 +80,13 @@ export function MapImage({ className = '', variant = 'map', ...props }: Props) {
         >
           <img
             src={floorplan.imageUrl}
-            alt="축제 지도"
+            alt={t('map.alt')}
             draggable={false}
             className="block h-full w-full"
           />
           {props.focus && (
             <span
-              aria-label="지정된 위치"
+              aria-label={t('map.pinned')}
               className="absolute"
               style={{ left: `${props.focus.x}%`, top: `${props.focus.y}%` }}
             >
@@ -108,6 +119,7 @@ function MapCanvas({
   selectedPoint,
   onSelect,
 }: Props & { floorplan: Floorplan }) {
+  const { t } = useTranslation()
   const viewport = useRef<HTMLDivElement>(null)
   const [view, setView] = useState<View>({ x: 0, y: 0, scale: 1 })
   const current = useRef(view)
@@ -204,7 +216,7 @@ function MapCanvas({
       <div
         ref={viewport}
         role="region"
-        aria-label={onSelect ? '지도에서 위치 선택' : '확대 가능한 축제 지도'}
+        aria-label={t(onSelect ? 'map.pick' : 'map.zoomable')}
         tabIndex={0}
         className="absolute inset-0 touch-none select-none outline-offset-[-3px]"
         style={{ cursor: onSelect ? 'crosshair' : 'grab' }}
@@ -283,7 +295,7 @@ function MapCanvas({
         >
           <img
             src={floorplan.imageUrl}
-            alt="축제 지도"
+            alt={t('map.alt')}
             draggable={false}
             className="block h-full w-full pointer-events-none"
           />
@@ -298,7 +310,7 @@ function MapCanvas({
                 <Link
                   to={`/booths/${b.id}`}
                   draggable={false}
-                  aria-label={`${b.name} 위치`}
+                  aria-label={t('map.locationOf', { name: b.name })}
                   className="absolute bottom-0 left-0 w-max -translate-x-1/2 rounded bg-brand px-2 py-1 text-xs font-bold text-white shadow"
                 >
                   {b.name}
@@ -307,7 +319,7 @@ function MapCanvas({
             ))}
           {selectedPoint && (
             <span
-              aria-label="선택한 위치"
+              aria-label={t('map.selected')}
               className="absolute"
               style={{ left: `${selectedPoint.x}%`, top: `${selectedPoint.y}%` }}
             >
@@ -321,12 +333,12 @@ function MapCanvas({
       </div>
       <div
         role="group"
-        aria-label="지도 확대 및 축소"
+        aria-label={t('map.zoomGroup')}
         className="absolute top-3 right-3 flex flex-col overflow-hidden rounded-xl bg-white text-brand shadow-card"
       >
         <button
           type="button"
-          aria-label="지도 확대"
+          aria-label={t('map.zoomIn')}
           disabled={view.scale >= 5}
           onClick={() => zoom(1.4)}
           className="size-10 text-2xl font-semibold disabled:text-gray-300"
@@ -335,7 +347,7 @@ function MapCanvas({
         </button>
         <button
           type="button"
-          aria-label="지도 전체 보기"
+          aria-label={t('map.fit')}
           onClick={reset}
           className="h-9 min-w-10 border-y border-gray-100 px-1 text-[11px] font-semibold"
         >
@@ -343,7 +355,7 @@ function MapCanvas({
         </button>
         <button
           type="button"
-          aria-label="지도 축소"
+          aria-label={t('map.zoomOut')}
           disabled={view.scale <= 1}
           onClick={() => zoom(1 / 1.4)}
           className="size-10 text-2xl font-semibold disabled:text-gray-300"

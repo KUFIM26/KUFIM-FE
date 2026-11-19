@@ -2,6 +2,7 @@ import { useFestival } from '../app/festival-context'
 import { festivalDays, performanceDays, seoulDate } from '../apis/adapters'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { useLabel } from '../i18n/label'
 import { Asset, Card, EmptyState, Tabs } from './ui'
 import { figmaAssets as assets } from '../data/figma-assets'
 import { facilities } from '../data/models'
@@ -141,14 +142,17 @@ export function PerformanceFilters({
   )
 }
 export function WaitingNumbers({ booth }: { booth: Booth }) {
+  const { t } = useTranslation()
   if (booth.teams === undefined || booth.minutes === undefined) return null
   return (
-    <div className="flex w-[90px] shrink-0 flex-col items-center gap-1">
-      <span className="text-xs font-medium">대기현황</span>
+    <div className="flex min-w-[90px] shrink-0 flex-col items-center gap-1">
+      <span className="text-xs font-medium">{t('booths.queue')}</span>
       <div className="flex gap-0.5 text-sm font-semibold text-[#8a0000]">
-        <span className="min-w-11 rounded-full bg-[#ffcccc] px-1 text-center">{booth.teams}팀</span>
-        <span className="min-w-11 rounded-full bg-[#ffcccc] px-1 text-center">
-          {booth.minutes}분
+        <span className="min-w-11 rounded-full bg-[#ffcccc] px-1 text-center whitespace-nowrap">
+          {t('booths.teams', { n: booth.teams })}
+        </span>
+        <span className="min-w-11 rounded-full bg-[#ffcccc] px-1 text-center whitespace-nowrap">
+          {t('booths.minutes', { n: booth.minutes })}
         </span>
       </div>
     </div>
@@ -207,11 +211,13 @@ export function FacilityFilters({
     [colored.imgFrame1597881224, muted.imgFrame1597881224],
   ]
   const hasSelection = facilities.includes(value)
+  const { t, i18n } = useTranslation()
+  const label = useLabel()
   return (
     <div
-      className="flex items-center justify-between gap-1 px-5 py-3"
+      className="flex items-start justify-between gap-1 px-5 py-3"
       role="group"
-      aria-label="시설 유형"
+      aria-label={t('booths.facilityType')}
     >
       {facilities.map((facility, i) => {
         const isMuted = hasSelection && value !== facility
@@ -232,7 +238,16 @@ export function FacilityFilters({
                 className={isMuted && i === 0 ? 'grayscale contrast-75 brightness-105' : ''}
               />
             </span>
-            <span className="whitespace-nowrap max-[360px]:text-xs">{facility}</span>
+            {/* 영어 이름은 길어서 두 줄로 접는다 */}
+            <span
+              className={
+                i18n.language === 'ko'
+                  ? 'whitespace-nowrap max-[360px]:text-xs'
+                  : 'w-[62px] text-center text-xs leading-tight max-[360px]:w-[52px] max-[360px]:text-[11px]'
+              }
+            >
+              {label(facility)}
+            </span>
           </button>
         )
       })}

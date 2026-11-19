@@ -5,9 +5,13 @@ import { Asset, Chips, EmptyState, Tabs } from '../components/ui'
 import { BoothRow, FacilityFilters, MapImage } from '../components/festival'
 import { boothCategories } from '../data/models'
 import { figmaAssets as assets } from '../data/figma-assets'
+import { useTranslation } from 'react-i18next'
+import { useLabel } from '../i18n/label'
 
 export default function MapPage() {
   const { booths, pins } = useFestival()
+  const { t } = useTranslation()
+  const label = useLabel()
   const [params, setParams] = useSearchParams()
   const period = params.get('period') === 'night' ? 'night' : 'day'
   const category = params.get('category') || '전체'
@@ -29,7 +33,7 @@ export default function MapPage() {
   )
   return (
     <Page
-      title="축제 지도"
+      title={t('map.title')}
       nav
       navAction={
         !list && (
@@ -39,7 +43,7 @@ export default function MapPage() {
             className="flex items-center gap-2 whitespace-nowrap rounded-full bg-brand px-3 py-2 text-base leading-5 font-bold text-white"
           >
             <Asset src={assets['53:1227'].imgVector3} />
-            리스트 보기
+            {t('map.listView')}
             <span className="flex h-5 items-center rounded-[10px] bg-white/30 px-1 text-xs">
               {items.length}
             </span>
@@ -53,8 +57,8 @@ export default function MapPage() {
           value={period}
           onChange={(v) => update('period', v)}
           options={[
-            { value: 'day', label: '주간' },
-            { value: 'night', label: '야간' },
+            { value: 'day', label: t('booths.day') },
+            { value: 'night', label: t('booths.night') },
           ]}
         />
       </div>
@@ -62,6 +66,7 @@ export default function MapPage() {
         <Chips
           options={boothCategories}
           value={category}
+          format={label}
           onChange={(v) => {
             setParams(
               (previous) => {
@@ -103,12 +108,12 @@ export default function MapPage() {
         />
         {list && (
           <section
-            aria-label="지도 부스 목록"
+            aria-label={t('map.listLabel')}
             className="absolute inset-x-0 top-[184px] bottom-0 overflow-y-auto rounded-t-xl border-t-2 border-[#d0d0d0] bg-white px-5 pb-24"
           >
             <button
               type="button"
-              aria-label="리스트 닫고 지도 보기"
+              aria-label={t('map.closeList')}
               onClick={() => update('view', '')}
               className="mx-auto flex h-6 w-20 items-center justify-center"
             >
@@ -118,11 +123,11 @@ export default function MapPage() {
               {items.length ? (
                 items.map((b) => <BoothRow key={b.id} booth={b} />)
               ) : (
-                <EmptyState>해당 위치에 표시할 항목이 없어요.</EmptyState>
+                <EmptyState>{t('map.emptyHere')}</EmptyState>
               )}
             </div>
             <Link to="/booths" className="mt-5 block text-center text-xs text-brand underline">
-              전체 부스 목록
+              {t('map.allBooths')}
             </Link>
           </section>
         )}

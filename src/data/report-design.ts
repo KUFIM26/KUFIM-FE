@@ -1,3 +1,5 @@
+import i18n from '../i18n'
+
 const base = '/assets/figma/reports'
 export const reportAssets = {
   back: `${base}/254-2/87cdd.svg`,
@@ -22,9 +24,9 @@ export function reportDate(value: string) {
 }
 export function reportElapsed(minutes: number) {
   const value = Math.max(0, Math.floor(minutes))
-  if (value < 60) return `${value}분 전`
-  if (value < 1440) return `${Math.floor(value / 60)}시간 전`
-  return `${Math.floor(value / 1440)}일 전`
+  if (value < 60) return i18n.t('time.minutesAgo', { n: value })
+  if (value < 1440) return i18n.t('time.hoursAgo', { n: Math.floor(value / 60) })
+  return i18n.t('time.daysAgo', { n: Math.floor(value / 1440) })
 }
 // 상황실 대표번호. VITE_CONTROL_ROOM_PHONE 이 설정되면 그 값이 우선한다.
 export const controlRoomTel = `tel:${(import.meta.env.VITE_CONTROL_ROOM_PHONE || '02-450-3990').replace(/[^0-9+]/g, '')}`

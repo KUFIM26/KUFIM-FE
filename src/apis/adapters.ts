@@ -1,5 +1,6 @@
 import type { BoothDto, FacilityDto, PerformanceDto, NoticeDto, Festival, Stage } from './type'
 import type { Booth, Performance, Notice } from '../data/models'
+import i18n from '../i18n'
 export const organizerLabels = {
   STUDENT_COUNCIL: '총학생회',
   COLLEGE: '단과대학',
@@ -46,7 +47,9 @@ export function codeFor<T extends string>(labels: Record<T, string>, label: stri
   return entry[0]
 }
 export const dateText = (value: string) =>
-  new Date(value).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })
+  new Date(value).toLocaleString(i18n.language === 'ko' ? 'ko-KR' : 'en-US', {
+    timeZone: 'Asia/Seoul',
+  })
 export const seoulDate = (value: string) =>
   new Date(value).toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' })
 const time = (value: string) =>

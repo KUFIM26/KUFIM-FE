@@ -15,38 +15,38 @@ import {
 import { reportApi, reportCategories } from '../apis/report'
 import type { ReportCategory, ReportInput } from '../apis/report'
 import { useAction, useResource } from '../hooks/useResource'
+import { useTranslation } from 'react-i18next'
+import { useLabel } from '../i18n/label'
 
 export function ReportLandingPage() {
   const resource = useResource(reportApi.mine, 10000)
+  const { t } = useTranslation()
   return (
     <Page
-      title="신고하기"
+      title={t('report.title')}
       back="/menu"
       backIcon={reportAssets.back}
       className="report-page report-landing"
     >
       <div className="page-pad !gap-3">
         <Card className="p-4">
-          <h2 className="text-sm font-bold">신고하기 전에!</h2>
+          <h2 className="text-sm font-bold">{t('report.beforeTitle')}</h2>
           <ol className="mt-1.5 list-decimal space-y-3 pl-[18px] text-xs font-medium">
-            <li>
-              무대/주취자 등 매우 긴급을 요하는 건의 경우 아래 상황실 연락처로 직접 문의하시기
-              바랍니다.
-            </li>
-            <li>또한 직접 방문이 필요한 경우 아래 버튼을 클릭하여 상황실 위치를 확인해주세요.</li>
+            <li>{t('report.before1')}</li>
+            <li>{t('report.before2')}</li>
           </ol>
         </Card>
         <a className="primary-button green-gradient gap-2" href={controlRoomTel}>
           <Asset src={reportAssets.phone} />
-          상황실 전화하기
+          {t('report.call')}
         </a>
         <Link className="primary-button green-gradient gap-2" to="/map?facility=상황실">
           <Asset src={reportAssets.location} />
-          상황실 위치 보기
+          {t('report.location')}
         </Link>
         <ReportLegend />
         <section className="flex flex-col gap-2">
-          <ReportHeading>나의 신고 내역</ReportHeading>
+          <ReportHeading>{t('report.mine')}</ReportHeading>
           <RequestState
             loading={resource.loading}
             error={resource.error}
@@ -56,13 +56,13 @@ export function ReportLandingPage() {
             (resource.data.length ? (
               <ReportRows reports={resource.data} />
             ) : (
-              <EmptyState>아직 신청한 신고가 없습니다.</EmptyState>
+              <EmptyState>{t('report.noneYet')}</EmptyState>
             ))}
         </section>
       </div>
       <BottomActions>
         <Link className="primary-button green-gradient" to="/report/new">
-          신고하기
+          {t('report.submit')}
         </Link>
       </BottomActions>
     </Page>
@@ -87,11 +87,13 @@ export function ReportFormPage() {
   const [cancel, setCancel] = useState(false)
   const action = useAction()
   const navigate = useNavigate()
+  const { t } = useTranslation()
+  const label = useLabel()
   const update = <K extends keyof ReportInput>(key: K, value: ReportInput[K]) =>
     setForm((f) => ({ ...f, [key]: value }))
   return (
     <Page
-      title="신고하기"
+      title={t('report.title')}
       back="/report"
       backIcon={reportAssets.back}
       className="report-page report-form"
@@ -114,11 +116,12 @@ export function ReportFormPage() {
         }}
       >
         <fieldset disabled={action.pending} className="flex min-w-0 flex-col gap-5">
-          <section className="report-field" aria-label="신고 유형">
-            <ReportHeading>신고 유형</ReportHeading>
+          <section className="report-field" aria-label={t('report.type')}>
+            <ReportHeading>{t('report.type')}</ReportHeading>
             <Chips
               options={Object.values(reportCategories)}
               value={reportCategories[form.category]}
+              format={label}
               onChange={(label) => {
                 const category = (Object.keys(reportCategories) as ReportCategory[]).find(
                   (key) => reportCategories[key] === label,
@@ -129,10 +132,10 @@ export function ReportFormPage() {
           </section>
           {(
             [
-              ['title', '신고 제목', 30, '신고 제목을 입력하세요.(30자 이내)'],
-              ['reporterName', '신고자 이름', 10, '신고자 성함을 입력하세요.(10자 이내)'],
-              ['phoneNumber', '신고자 연락처', 11, '신고자 연락처를 입력하세요.(11자 이내)'],
-              ['place', '발생 장소', 50, '발생 장소를 입력하세요.(최대한 구체적으로)'],
+              ['title', t('report.fieldTitle'), 30, t('report.fieldTitlePh')],
+              ['reporterName', t('report.fieldName'), 10, t('report.fieldNamePh')],
+              ['phoneNumber', t('report.fieldPhone'), 11, t('report.fieldPhonePh')],
+              ['place', t('report.fieldPlace'), 50, t('report.fieldPlacePh')],
             ] as const
           ).map(([key, label, max, placeholder]) => (
             <label className="report-field" key={key}>
@@ -161,23 +164,20 @@ export function ReportFormPage() {
             </label>
           ))}
           <label className="report-field">
-            <ReportHeading>신고 내용</ReportHeading>
+            <ReportHeading>{t('report.content')}</ReportHeading>
             <textarea
               required
               maxLength={300}
               className="form-control report-control !min-h-[132px]"
-              placeholder="신고 내용을 입력하세요. (300자 이내)"
+              placeholder={t('report.contentPh')}
               value={form.content}
               onChange={(e) => update('content', e.target.value)}
             />
             <span className="text-right text-xs text-muted">{form.content.length}/300</span>
           </label>
           <section className="report-field">
-            <ReportHeading>개인정보 활용 동의</ReportHeading>
-            <Card className="report-value">
-              신고 접수와 처리 결과 안내를 위해 이름, 전화번호를 수집·이용하며, 축제 종료 후
-              파기합니다.
-            </Card>
+            <ReportHeading>{t('report.privacy')}</ReportHeading>
+            <Card className="report-value">{t('report.privacyBody')}</Card>
             <label className="relative ml-auto flex w-fit items-center justify-end gap-2 text-sm text-[#8b8b8b]">
               <input
                 type="checkbox"
@@ -195,7 +195,7 @@ export function ReportFormPage() {
                   WebkitMask: `url(${reportAssets.check}) center / contain no-repeat`,
                 }}
               />
-              <span className="transition-colors peer-checked:text-brand">동의합니다</span>
+              <span className="transition-colors peer-checked:text-brand">{t('report.agree')}</span>
             </label>
           </section>
         </fieldset>
@@ -210,24 +210,24 @@ export function ReportFormPage() {
             disabled={action.pending}
             className="!bg-[#ffa3a3] !text-[#3b0500]"
           >
-            {action.pending ? '신고 중…' : '신고하기'}
+            {action.pending ? t('report.submitting') : t('report.submit')}
           </Button>
           <Button tone="gray" disabled={action.pending} onClick={() => setCancel(true)}>
-            취소하기
+            {t('report.cancel')}
           </Button>
         </div>
       </BottomActions>
       <ConfirmDialog
         open={cancel}
-        title="신고 중단하기"
+        title={t('report.stopTitle')}
         onClose={() => setCancel(false)}
         onConfirm={() => navigate('/report')}
-        confirmLabel="중단하기"
-        cancelLabel="돌아가기"
+        confirmLabel={t('report.stop')}
+        cancelLabel={t('report.goBack')}
       >
-        입력하신 모든 정보가 삭제됩니다.
+        {t('report.stopBody1')}
         <br />
-        신고를 중단하시겠습니까?
+        {t('report.stopBody2')}
       </ConfirmDialog>
     </Page>
   )
@@ -239,8 +239,14 @@ export function ReportDetailPage() {
   const action = useAction()
   const [cancel, setCancel] = useState(false)
   const report = resource.data
+  const { t } = useTranslation()
   return (
-    <Page title="신고하기" back="/report" backIcon={reportAssets.back} className="report-page">
+    <Page
+      title={t('report.title')}
+      back="/report"
+      backIcon={reportAssets.back}
+      className="report-page"
+    >
       <div className="page-pad !gap-5">
         <RequestState
           loading={resource.loading}
@@ -255,13 +261,13 @@ export function ReportDetailPage() {
             <ReportContent report={report} />
             {report.adminNote && (
               <section className="report-field">
-                <ReportHeading>처리 내용</ReportHeading>
+                <ReportHeading>{t('report.handled')}</ReportHeading>
                 <Card className="report-value whitespace-pre-wrap">{report.adminNote}</Card>
               </section>
             )}
             {report.status === 'SUBMITTED' && (
               <Button tone="gray" disabled={action.pending} onClick={() => setCancel(true)}>
-                신고 취소
+                {t('report.cancelReport')}
               </Button>
             )}
           </>
@@ -269,7 +275,7 @@ export function ReportDetailPage() {
       </div>
       <ConfirmDialog
         open={cancel}
-        title="신고 취소하기"
+        title={t('report.cancelTitle')}
         onClose={() => setCancel(false)}
         onConfirm={() => {
           setCancel(false)
@@ -278,10 +284,10 @@ export function ReportDetailPage() {
             await resource.refresh()
           })
         }}
-        confirmLabel="신고 취소"
-        cancelLabel="유지하기"
+        confirmLabel={t('report.cancelReport')}
+        cancelLabel={t('report.keep')}
       >
-        신청한 신고를 취소하시겠습니까?
+        {t('report.cancelAsk')}
       </ConfirmDialog>
     </Page>
   )

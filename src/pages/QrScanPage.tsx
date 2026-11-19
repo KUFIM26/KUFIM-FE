@@ -5,6 +5,8 @@ import { Page } from '../components/layout'
 import { Button } from '../components/ui'
 import { useBoothApi } from '../hooks/useBoothApi'
 import { errorMessage } from '../apis/axios'
+import { useTranslation } from 'react-i18next'
+import i18n from '../i18n'
 
 function boothFromQr(value: string) {
   const url = new URL(value, window.location.origin)
@@ -13,25 +15,25 @@ function boothFromQr(value: string) {
     url.search ||
     url.hash
   )
-    throw new Error('이 축제의 부스 QR 코드가 아닙니다. 부스에 게시된 QR 코드를 스캔해 주세요.')
+    throw new Error(i18n.t('scan.foreign'))
   const code = /^\/w\/([^/]+)\/?$/.exec(url.pathname)
   if (code) return useBoothApi.findByCode(decodeURIComponent(code[1]))
   const registration = /^\/waiting\/register\/([1-9]\d*)\/?$/.exec(url.pathname)
   if (registration && Number.isSafeInteger(Number(registration[1])))
     return useBoothApi.find(Number(registration[1]))
-  throw new Error('웨이팅 접수용 QR 코드가 아닙니다. 부스 QR 코드를 다시 확인해 주세요.')
+  throw new Error(i18n.t('scan.notWaiting'))
 }
 
 function cameraMessage(error: unknown) {
   const name = error instanceof DOMException ? error.name : ''
-  if (name === 'NotAllowedError' || name === 'SecurityError')
-    return '카메라 권한이 필요합니다. 브라우저 설정에서 카메라를 허용한 뒤 다시 시도해 주세요.'
+  if (name === 'NotAllowedError' || name === 'SecurityError') return i18n.t('scan.needPermission')
   if (name === 'NotFoundError' || String(error).includes('not found'))
-    return '사용할 수 있는 카메라가 없습니다. 카메라가 있는 기기에서 이용해 주세요.'
-  return '카메라를 실행하지 못했습니다. 다른 앱에서 카메라를 사용 중인지 확인한 뒤 다시 시도해 주세요.'
+    return i18n.t('scan.noCamera')
+  return i18n.t('scan.cameraFailed')
 }
 
 export default function QrScanPage() {
+  const { t } = useTranslation()
   const video = useRef<HTMLVideoElement>(null)
   const frame = useRef<HTMLDivElement>(null)
   const dialog = useRef<HTMLDialogElement>(null)
@@ -135,7 +137,7 @@ export default function QrScanPage() {
 
   return (
     <Page
-      title="QR 웨이팅"
+      title={t('waiting.title')}
       back="/waiting"
       backIcon="/assets/figma/scanner/back.svg"
       className="qr-scanner-page !min-h-0 h-[calc(100dvh-68px)] overflow-hidden !bg-black text-white"
@@ -143,7 +145,7 @@ export default function QrScanPage() {
       <video
         key={attempt}
         ref={video}
-        aria-label="부스 QR 스캔 카메라"
+        aria-label={t('scan.camera')}
         muted
         playsInline
         className="absolute inset-0 h-full w-full rounded-t-xl object-cover"
@@ -152,13 +154,11 @@ export default function QrScanPage() {
         <div
           ref={frame}
           role="img"
-          aria-label="QR 인식 영역"
+          aria-label={t('scan.frame')}
           className="aspect-square w-full border-4 border-solid border-white"
         />
         <p role="status" className="w-full text-center text-sm font-bold">
-          {checking
-            ? '부스 QR 코드를 확인하고 있습니다.'
-            : 'QR 코드를 사각형 내부에 정확히 인식해주세요.'}
+          {checking ? t('scan.checking') : t('scan.aim')}
         </p>
       </div>
       {cameraError && (
@@ -166,7 +166,7 @@ export default function QrScanPage() {
           <p role="alert" className="text-sm">
             {cameraError}
           </p>
-          <Button onClick={retryCamera}>카메라 다시 시도</Button>
+          <Button onClick={retryCamera}>{t('scan.retryCamera')}</Button>
         </div>
       )}
       <Link
@@ -174,7 +174,7 @@ export default function QrScanPage() {
         className="primary-button absolute right-5 bottom-5 left-5 !w-auto bg-[#bcbcbc] !text-[#2a2a2a]"
         style={{ bottom: 'max(20px, env(safe-area-inset-bottom))' }}
       >
-        돌아가기
+        {t('scan.back')}
       </Link>
       <dialog
         ref={dialog}
@@ -186,10 +186,10 @@ export default function QrScanPage() {
         }}
       >
         <h2 id="scan-error-title" className="text-center text-xl font-bold">
-          QR 코드 확인
+          {t('scan.checkTitle')}
         </h2>
         <p className="my-3 text-center text-sm">{scanError}</p>
-        <Button onClick={scanAgain}>다시 스캔하기</Button>
+        <Button onClick={scanAgain}>{t('scan.scanAgain')}</Button>
       </dialog>
     </Page>
   )
