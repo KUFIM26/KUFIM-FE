@@ -10,6 +10,8 @@ export type FestivalData = {
   performances: Performance[]
   notices: Notice[]
   unreadNotifications: number
+  /** 서버가 영어 저장을 지원하는지. 지원할 때만 관리자 등록 화면에 영어 칸을 보여준다. */
+  englishContent: boolean
 }
 export const FestivalContext = createContext<
   (FestivalData & { refresh: () => Promise<void> }) | null

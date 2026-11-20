@@ -1,5 +1,5 @@
 import { useFestival } from '../app/festival-context'
-import { festivalDays, performanceDays, seoulDate } from '../apis/adapters'
+import { festivalDays, localized, performanceDays, seoulDate } from '../apis/adapters'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useLabel } from '../i18n/label'
@@ -136,7 +136,10 @@ export function PerformanceFilters({
         underline
         value={stage}
         onChange={onStage}
-        options={stages.map((s) => ({ value: String(s.stageId), label: s.name }))}
+        options={stages.map((s) => ({
+          value: String(s.stageId),
+          label: localized(s.name, s.nameEn),
+        }))}
       />
     </div>
   )

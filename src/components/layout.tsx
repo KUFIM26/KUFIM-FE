@@ -12,6 +12,7 @@ import { RequestState } from './RequestState'
 import { useTranslation } from 'react-i18next'
 import { applyLanguage, languageFor } from '../i18n'
 import { LanguageToggle } from './LanguageToggle'
+import { localized } from '../apis/adapters'
 
 export function RootLayout() {
   const { pathname } = useLocation()
@@ -86,7 +87,7 @@ export function Header({
         <div>
           <p className="text-xs font-bold">KUFIM</p>
           <h1 className="mt-0.5 text-lg font-bold max-[360px]:text-base">
-            {festival?.name || t('header.fallbackTitle')}
+            {festival ? localized(festival.name, festival.nameEn) : t('header.fallbackTitle')}
           </h1>
         </div>
         <LanguageToggle className="ml-auto" />

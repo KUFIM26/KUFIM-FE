@@ -15,6 +15,8 @@ export type Pin = { xPercent: number; yPercent: number }
 export type Festival = {
   festivalId: number
   name: string
+  /** 영어 값. 서버가 영어 저장을 지원하기 전에는 필드 자체가 없다. */
+  nameEn?: string | null
   location: string | null
   startAt: string
   endAt: string
@@ -29,6 +31,7 @@ export type Stage = {
   stageId: number
   festivalId?: number
   name: string
+  nameEn?: string | null
   entryStatus: 'OPEN' | 'RESTRICTED'
   displayOrder: number
   zones?: {
@@ -43,6 +46,9 @@ export type BoothDto = {
   boothId: number
   festivalId?: number
   name: string
+  nameEn?: string | null
+  placeEn?: string | null
+  descriptionEn?: string | null
   organizerType: OrganizerType
   period: 'DAY' | 'NIGHT'
   place: string
@@ -60,6 +66,8 @@ export type FacilityDto = {
   festivalId?: number
   type: FacilityType
   name: string
+  nameEn?: string | null
+  placeEn?: string | null
   description: string | null
   place: string
   operatingHours: string | null
@@ -69,9 +77,12 @@ export type PerformanceDto = {
   performanceId: number
   festivalId?: number
   title: string
+  titleEn?: string | null
+  descriptionEn?: string | null
   type: PerformanceType
   stageId: number
   stageName?: string
+  stageNameEn?: string | null
   place?: string
   startAt: string
   endAt: string
@@ -85,6 +96,8 @@ export type NoticeDto = {
   noticeId: number
   title: string
   content: string
+  titleEn?: string | null
+  contentEn?: string | null
   category: NoticeCategory
   publishedAt: string
   unread?: boolean | null
@@ -179,7 +192,13 @@ export type NotificationPage = {
   totalElements: number
   unreadCount: number
 }
-export type NoticeInput = { title: string; content: string; category: NoticeCategory }
+export type NoticeInput = {
+  title: string
+  content: string
+  category: NoticeCategory
+  titleEn?: string | null
+  contentEn?: string | null
+}
 export type BoothInput = {
   festivalId?: number
   name: string
@@ -190,6 +209,9 @@ export type BoothInput = {
   operatingHours: string
   waitingEnabled: boolean
   pin: Pin | null
+  nameEn?: string | null
+  placeEn?: string | null
+  descriptionEn?: string | null
 }
 export type FacilityInput = {
   festivalId?: number
@@ -199,6 +221,8 @@ export type FacilityInput = {
   place: string
   operatingHours: string
   pin: Pin | null
+  nameEn?: string | null
+  placeEn?: string | null
 }
 export type PerformanceInput = {
   festivalId?: number
@@ -211,4 +235,6 @@ export type PerformanceInput = {
   setlist: string
   startAt: string
   endAt: string
+  titleEn?: string | null
+  descriptionEn?: string | null
 }

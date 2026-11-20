@@ -1,4 +1,5 @@
-import { useCallback } from 'react'
+import { useCallback, useEffect } from 'react'
+import i18n from '../i18n'
 import type { ReactNode } from 'react'
 import { useResource } from '../hooks/useResource'
 import { useFestivalApi } from '../hooks/useFestivalApi'
@@ -92,6 +93,12 @@ export function FestivalProvider({
   const refresh = useCallback(async () => {
     await Promise.all([refreshCatalog(), refreshBooths(), refreshNoticeFeed()])
   }, [refreshCatalog, refreshBooths, refreshNoticeFeed])
+  // 이름·소개는 불러올 때 현재 언어로 고르므로, 언어가 바뀌면 다시 불러온다.
+  useEffect(() => {
+    const reload = () => void refresh()
+    i18n.on('languageChanged', reload)
+    return () => i18n.off('languageChanged', reload)
+  }, [refresh])
   const error = resource.error || boothResource.error || noticeResource.error
   const loading = resource.loading || boothResource.loading || noticeResource.loading
   if (!resource.data || !boothResource.data || !noticeResource.data) {
@@ -105,6 +112,7 @@ export function FestivalProvider({
         booths: [...boothResource.data, ...resource.data.facilities],
         notices: noticeResource.data,
         unreadNotifications: unreadResource.data ?? 0,
+        englishContent: !!resource.data.festival && 'nameEn' in resource.data.festival,
         refresh,
       }}
     >

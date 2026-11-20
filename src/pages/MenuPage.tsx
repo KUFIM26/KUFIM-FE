@@ -2,7 +2,7 @@ import { useFestival } from '../app/festival-context'
 import { useAuth } from '../app/auth-context'
 import { useAction } from '../hooks/useResource'
 import { RequestState } from '../components/RequestState'
-import { seoulDate } from '../apis/adapters'
+import { localized, seoulDate } from '../apis/adapters'
 import { Link } from 'react-router-dom'
 import { Page } from '../components/layout'
 import { Asset, Card, SectionTitle } from '../components/ui'
@@ -97,7 +97,9 @@ export default function MenuPage({ admin = false }: { admin?: boolean }) {
             <span>FIM</span>
           </div>
           <div>
-            <p className="text-sm font-bold">{festival?.name || t('menu.festivalPending')}</p>
+            <p className="text-sm font-bold">
+              {festival ? localized(festival.name, festival.nameEn) : t('menu.festivalPending')}
+            </p>
             <p className="mt-1.5 text-xs font-medium">
               {festival
                 ? `${festivalDate(festival.startAt, i18n.language)} ~ ${festivalDate(festival.endAt, i18n.language)}`

@@ -70,17 +70,22 @@ export function festivalDays(festival: Festival | null) {
 export function performanceDays(festival: Festival | null, performances: Performance[]) {
   return [...new Set([...festivalDays(festival), ...performances.map((p) => p.day)])].sort()
 }
+/** 영어 화면에서 영어 값이 있으면 영어, 없으면 한국어 원문을 쓴다. */
+export const localized = (korean: string, english?: string | null) =>
+  i18n.language === 'en' && english ? english : korean
 export function boothView(b: BoothDto): Booth {
   return {
     id: String(b.boothId),
     apiId: b.boothId,
     festivalId: b.festivalId,
-    name: b.name,
+    name: localized(b.name, b.nameEn),
+    ko: { name: b.name, place: b.place, description: b.description || '' },
+    en: { name: b.nameEn || '', place: b.placeEn || '', description: b.descriptionEn || '' },
     category: organizerLabels[b.organizerType],
     period: b.period === 'DAY' ? 'day' : 'night',
-    place: b.place,
+    place: localized(b.place, b.placeEn),
     hours: b.operatingHours || '',
-    description: b.description || '',
+    description: localized(b.description || '', b.descriptionEn),
     waitingEnabled: b.waitingEnabled,
     teams: b.waitingEnabled ? (b.waitingTeamCount ?? undefined) : undefined,
     minutes: b.waitingEnabled ? (b.estimatedWaitMinutes ?? undefined) : undefined,
@@ -93,30 +98,35 @@ export function facilityView(f: FacilityDto): Booth {
     id: `facility-${f.facilityId}`,
     apiId: f.facilityId,
     festivalId: f.festivalId,
-    name: f.name,
+    name: localized(f.name, f.nameEn),
+    ko: { name: f.name, place: f.place, description: f.description || '' },
+    en: { name: f.nameEn || '', place: f.placeEn || '', description: '' },
     category: facilityLabels[f.type],
     period: 'facility',
-    place: f.place,
+    place: localized(f.place, f.placeEn),
     hours: f.operatingHours || '',
     description: f.description || '',
     position: f.pin ? { x: f.pin.xPercent, y: f.pin.yPercent } : undefined,
   }
 }
 export function performanceView(p: PerformanceDto, stages: Stage[]): Performance {
+  const stage = stages.find((s) => s.stageId === p.stageId)
   return {
     id: String(p.performanceId),
     apiId: p.performanceId,
     festivalId: p.festivalId,
-    name: p.title,
+    name: localized(p.title, p.titleEn),
+    ko: { name: p.title, description: p.description || '' },
+    en: { name: p.titleEn || '', description: p.descriptionEn || '' },
     day: seoulDate(p.startAt),
     date: seoulDate(p.startAt),
     stage: String(p.stageId),
     time: time(p.startAt),
     end: time(p.endAt),
-    place: p.stageName || stages.find((s) => s.stageId === p.stageId)?.name || '',
+    place: localized(p.stageName || stage?.name || '', p.stageNameEn || stage?.nameEn),
     kind: performanceLabels[p.type],
     status: p.status?.toLowerCase() as Performance['status'],
-    description: p.description || '',
+    description: localized(p.description || '', p.descriptionEn),
     additionalDescription: p.additionalDescription || '',
     cast: p.castMembers || '',
     setlist: p.setlist || '',
@@ -126,8 +136,10 @@ export function noticeView(n: NoticeDto): Notice {
   const day = seoulDate(n.publishedAt)
   return {
     id: String(n.noticeId),
-    title: n.title,
-    body: n.content,
+    title: localized(n.title, n.titleEn),
+    body: localized(n.content, n.contentEn),
+    ko: { title: n.title, body: n.content },
+    en: { title: n.titleEn || '', body: n.contentEn || '' },
     category: noticeLabels[n.category],
     date: `${day.slice(5).replace('-', '.')}. ${time(n.publishedAt)}`,
     unread: n.unread === true,

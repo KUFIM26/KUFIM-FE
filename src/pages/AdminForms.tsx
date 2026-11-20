@@ -23,6 +23,8 @@ import { boothCategories } from '../data/models'
 import type { Booth } from '../data/models'
 import { figmaAssets as assets } from '../data/figma-assets'
 import { NotFoundPage } from './UtilityPages'
+import { EnglishField } from '../components/EnglishField'
+import { missingEnglish } from '../apis/translate'
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -58,6 +60,10 @@ function SaveBar({
   )
 }
 const value = (data: FormData, key: string) => String(data.get(key) || '').trim()
+// 영어 칸은 비워 둘 수 있다. 빈 값은 null로 보내 서버가 한국어를 대신 쓰게 한다.
+// filled는 저장 직전에 마저 번역한 값이다.
+const english = (data: FormData, key: string, filled: Record<string, string>) =>
+  value(data, key) || filled[key] || null
 
 function TimeSelect({ name, initial }: { name: string; initial?: string }) {
   const times = Array.from(
@@ -91,7 +97,7 @@ function TimeSelect({ name, initial }: { name: string; initial?: string }) {
 
 export function NoticeFormPage() {
   const { id } = useParams()
-  const { notices, refresh } = useFestival()
+  const { notices, refresh, englishContent } = useFestival()
   const action = useAction()
   const item = notices.find((n) => n.id === id)
   const [category, setCategory] = useState(item?.category || '긴급')
@@ -109,12 +115,18 @@ export function NoticeFormPage() {
   }
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    const data = new FormData(event.currentTarget)
+    const form = event.currentTarget
+    const data = new FormData(form)
     void action.run(async () => {
+      const filled = englishContent ? await missingEnglish(form) : {}
       const input = {
         title: value(data, 'title'),
         content: value(data, 'body'),
         category: codeFor(noticeLabels, category),
+        ...(englishContent && {
+          titleEn: english(data, 'titleEn', filled),
+          contentEn: english(data, 'bodyEn', filled),
+        }),
       }
       if (item) await useNoticeApi.update(Number(item.id), input)
       else await useNoticeApi.make(input)
@@ -139,19 +151,38 @@ export function NoticeFormPage() {
             name="title"
             required
             maxLength={25}
-            defaultValue={item?.title}
+            defaultValue={item?.ko?.title ?? item?.title}
             placeholder="공지 제목을 입력하세요.(25자 이내)"
           />
         </Field>
+        {englishContent && (
+          <EnglishField
+            name="titleEn"
+            source="title"
+            label="공지 제목"
+            maxLength={60}
+            defaultValue={item?.en?.title}
+          />
+        )}
         <Field label="공지 내용">
           <textarea
             className="form-control min-h-[189px] resize-y"
             name="body"
             required
-            defaultValue={item?.body}
+            defaultValue={item?.ko?.body ?? item?.body}
             placeholder="공지 내용을 입력하세요."
           />
         </Field>
+        {englishContent && (
+          <EnglishField
+            name="bodyEn"
+            source="body"
+            label="공지 내용"
+            maxLength={2000}
+            multiline
+            defaultValue={item?.en?.body}
+          />
+        )}
         {item && (
           <Button
             tone="red"
@@ -187,7 +218,7 @@ export function NoticeFormPage() {
 }
 export function PerformanceFormPage() {
   const { id } = useParams()
-  const { performances, festival, stages, refresh } = useFestival()
+  const { performances, festival, stages, refresh, englishContent } = useFestival()
   const action = useAction()
   const item = performances.find((p) => p.id === id)
   const [params] = useSearchParams()
@@ -211,13 +242,15 @@ export function PerformanceFormPage() {
   }
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    const data = new FormData(event.currentTarget)
+    const form = event.currentTarget
+    const data = new FormData(form)
     if (value(data, 'end') <= value(data, 'time')) {
       setTimeError('종료 시간을 시작 시간 이후로 선택해주세요.')
       return
     }
     void action.run(async () => {
       if (!festival || !stage || !day) throw new Error('축제와 무대가 먼저 등록되어야 합니다.')
+      const filled = englishContent ? await missingEnglish(form) : {}
       const input = {
         ...(item ? {} : { festivalId: festival.festivalId }),
         stageId: Number(stage),
@@ -229,6 +262,10 @@ export function PerformanceFormPage() {
         setlist: value(data, 'setlist'),
         startAt: `${day}T${value(data, 'time')}:00+09:00`,
         endAt: `${day}T${value(data, 'end')}:00+09:00`,
+        ...(englishContent && {
+          titleEn: english(data, 'nameEn', filled),
+          descriptionEn: english(data, 'descriptionEn', filled),
+        }),
       }
       if (item) await usePerformanceApi.update(item.apiId, input)
       else await usePerformanceApi.make(input)
@@ -254,10 +291,19 @@ export function PerformanceFormPage() {
             name="name"
             required
             maxLength={15}
-            defaultValue={item?.name}
+            defaultValue={item?.ko?.name ?? item?.name}
             placeholder="무대 팀명을 입력하세요.(15자 이내)"
           />
         </Field>
+        {englishContent && (
+          <EnglishField
+            name="nameEn"
+            source="name"
+            label="무대 팀명"
+            maxLength={40}
+            defaultValue={item?.en?.name}
+          />
+        )}
         <section className="form-field">
           <SectionTitle>공연 시간</SectionTitle>
           <div className="flex items-center gap-4">
@@ -282,10 +328,20 @@ export function PerformanceFormPage() {
             className="form-control min-h-[132px] resize-y"
             name="description"
             required
-            defaultValue={item?.description}
+            defaultValue={item?.ko?.description ?? item?.description}
             placeholder="공연 소개를 입력하세요."
           />
         </Field>
+        {englishContent && (
+          <EnglishField
+            name="descriptionEn"
+            source="description"
+            label="공연 소개"
+            maxLength={1000}
+            multiline
+            defaultValue={item?.en?.description}
+          />
+        )}
         <Field label="공연 소개">
           <textarea
             aria-label="공연 소개 추가 내용"
@@ -391,7 +447,7 @@ function LocationPicker({
 }
 export function BoothFormPage() {
   const { id } = useParams()
-  const { booths, festival, floorplan, refresh } = useFestival()
+  const { booths, festival, floorplan, refresh, englishContent } = useFestival()
   const action = useAction()
   const item = booths.find((b) => b.id === id)
   const [params, setParams] = useSearchParams()
@@ -428,9 +484,11 @@ export function BoothFormPage() {
     )
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    const data = new FormData(event.currentTarget)
+    const form = event.currentTarget
+    const data = new FormData(form)
     void action.run(async () => {
       if (!festival) throw new Error('축제가 먼저 등록되어야 합니다.')
+      const filled = englishContent ? await missingEnglish(form) : {}
       if (item && (item.period === 'facility') !== facility)
         throw new Error('부스와 시설 간 유형 변경은 지원하지 않습니다.')
       const common = {
@@ -440,6 +498,10 @@ export function BoothFormPage() {
         place: value(data, 'place'),
         operatingHours: value(data, 'hours'),
         pin: position ? { xPercent: position.x, yPercent: position.y } : null,
+        ...(englishContent && {
+          nameEn: english(data, 'nameEn', filled),
+          placeEn: english(data, 'placeEn', filled),
+        }),
       }
       if (facility) {
         const input = { ...common, type: codeFor(facilityLabels, category) }
@@ -451,6 +513,7 @@ export function BoothFormPage() {
           period: period === 'night' ? ('NIGHT' as const) : ('DAY' as const),
           organizerType: codeFor(organizerLabels, category),
           waitingEnabled: data.get('waitingEnabled') === 'on',
+          ...(englishContent && { descriptionEn: english(data, 'descriptionEn', filled) }),
         }
         if (item) await useBoothApi.update(item.apiId, input)
         else await useBoothApi.make(input)
@@ -494,19 +557,37 @@ export function BoothFormPage() {
             name="name"
             required
             maxLength={15}
-            defaultValue={item?.name}
+            defaultValue={item?.ko?.name ?? item?.name}
             placeholder="부스 이름을 입력하세요.(15자 이내)"
           />
         </Field>
+        {englishContent && (
+          <EnglishField
+            name="nameEn"
+            source="name"
+            label={facility ? '시설 명' : '부스 명'}
+            maxLength={40}
+            defaultValue={item?.en?.name}
+          />
+        )}
         <Field label={facility ? '시설 장소' : '운영 장소'}>
           <input
             className="form-control"
             name="place"
             required
-            defaultValue={item?.place}
+            defaultValue={item?.ko?.place ?? item?.place}
             placeholder="운영 장소를 입력하세요."
           />
         </Field>
+        {englishContent && (
+          <EnglishField
+            name="placeEn"
+            source="place"
+            label={facility ? '시설 장소' : '운영 장소'}
+            maxLength={60}
+            defaultValue={item?.en?.place}
+          />
+        )}
         <Field label="운영 시간">
           <input
             name="hours"
@@ -529,10 +610,20 @@ export function BoothFormPage() {
           <textarea
             className="form-control min-h-[132px] resize-y"
             name="description"
-            defaultValue={item?.description}
+            defaultValue={item?.ko?.description ?? item?.description}
             placeholder="공연 소개를 입력하세요."
           />
         </Field>
+        {englishContent && !facility && (
+          <EnglishField
+            name="descriptionEn"
+            source="description"
+            label="부스 소개"
+            maxLength={1000}
+            multiline
+            defaultValue={item?.en?.description}
+          />
+        )}
         <section className="form-field">
           <SectionTitle>{facility ? '시설' : '부스'} 위치 지정(지도를 클릭하여 수정)</SectionTitle>
           {!floorplan && (
